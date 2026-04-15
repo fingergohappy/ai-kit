@@ -27,8 +27,6 @@ Check `$ARGUMENTS` first, then fall back to natural language parsing:
 
 使用 tmux pane ID（如 `%7`），不是 session:window.pane 格式。pane ID 不会变，更稳定。
 
-查看所有 pane ID：`tmux list-panes -a -F '#{pane_id} #{session_name}:#{window_index}.#{pane_index} #{pane_current_command}'`
-
 ## Sending content
 
 Use tmux paste buffer directly (no external script needed):
