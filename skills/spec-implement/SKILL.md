@@ -23,8 +23,9 @@ argument-hint: [文档路径, 如 docs/spec/xxx_feature.md]
 2. 判断输入来源:
    - 如果 $ARGUMENTS 包含 `.md` 文件路径 → 读取文档内容，走模式 B
    - 否则 → 从当前对话上下文总结，走模式 A
-3. 生成消息内容（末尾附带反馈指令）
-4. 通过 tco-spec:tmux-send skill 发送（由 tco-spec:tmux-send 负责确定目标 pane）
+3. **更新文档状态为 `doing`**：如果输入来源是已有文档，将该文档 frontmatter 中的 `status` 从 `draft` 改为 `doing`
+4. 生成消息内容（末尾附带反馈指令）
+5. 通过 tco-spec:tmux-send skill 发送（由 tco-spec:tmux-send 负责确定目标 pane）
 
 ## 模式 A：从对话总结
 

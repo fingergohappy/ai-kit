@@ -22,8 +22,9 @@ argument-hint: [review文档路径, 如 docs/spec/xxx_review.md]
    ```
 2. 从 $ARGUMENTS 获取 review 文档路径
 3. 如果没有提供路径，询问用户要修复哪个 review 文档
-4. 生成修复指令消息（末尾附带反馈指令）
-5. 通过 tco-spec:tmux-send skill 发送（由 tco-spec:tmux-send 负责确定目标 pane）
+4. **更新关联文档状态为 `doing`**：找到 review 文档对应的 feature/change 文档，将其 frontmatter 中的 `status` 改为 `doing`
+5. 生成修复指令消息（末尾附带反馈指令）
+6. 通过 tco-spec:tmux-send skill 发送（由 tco-spec:tmux-send 负责确定目标 pane）
 
 ## 消息格式
 

@@ -22,9 +22,9 @@ argument-hint: [可选: 反馈消息内容]
 1. 获取反馈来源信息（从消息末尾的 `[feedback from ...]` 标签中提取 pane_id）
 2. 调用 tco-spec:spec-review 审查反馈对应的代码变更
 3. 根据审查结果决定下一步：
-   - 全部通过 → 结束，通知用户
+   - 全部通过 → 将关联的 feature/change 文档 frontmatter 中的 `status` 改为 `done`，结束，通知用户
    - 有 CRITICAL/HIGH 问题 → 调用 tco-spec:spec-implement 发送修复任务（再来一轮）
-   - 只有 MEDIUM/LOW 问题 → 结束，将审查结果告知用户，由用户决定
+   - 只有 MEDIUM/LOW 问题 → 将关联的 feature/change 文档 frontmatter 中的 `status` 改为 `done`，结束，将审查结果告知用户，由用户决定
 4. 如果进入新一轮修复，累计轮次，达到 3 轮上限时停下来让用户决定
 
 ## 调用 tco-spec:spec-review 的规则

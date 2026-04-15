@@ -2,7 +2,7 @@
 title: {功能名称}
 type: feature
 date: {YYYY-MM-DD}
-status: draft          # draft → review → final
+status: draft          # draft → doing → done
 version: "1.0"
 summary: {1-2 句说明功能目的}
 scope:
