@@ -90,33 +90,63 @@ Agents use these tags to identify message types and route responses correctly.
 
 ### Claude Code
 
-Clone to the Claude Code plugins directory:
+In Claude Code, use the `/plugin` command to install:
 
-```bash
-git clone https://github.com/fingergohappy/tco-spec.git ~/.claude/plugins/tco-spec
+```
+/plugin install tco-spec
 ```
 
-After installation, skills will be available with the `tco-spec:` prefix:
+Or install via CLI:
+
+```bash
+claude plugin install tco-spec --scope user
+```
+
+After installation, restart Claude Code. Skills will be available with the `tco-spec:` prefix:
 
 ```
 /tco-spec:spec-feature login-system
 /tco-spec:spec-implement docs/spec/login_feature.md
 ```
+
+<details>
+<summary>Alternative: local development</summary>
+
+If you want to test locally before publishing:
+
+```bash
+claude --plugin-dir /path/to/tco-spec
+```
+
+</details>
 
 ### Codex (OpenAI)
 
-Clone to the Codex skills directory:
+Clone the skill directory to the Codex skills folder:
 
 ```bash
-git clone https://github.com/fingergohappy/tco-spec.git ~/.codex/skills/tco-spec
+# User scope (global)
+git clone https://github.com/fingergohappy/tco-spec.git ~/.agents/skills/tco-spec
+
+# Or project scope
+git clone https://github.com/fingergohappy/tco-spec.git .agents/skills/tco-spec
 ```
 
-After installation, skills will be available with the `tco-spec:` prefix:
+Codex auto-discovers skills on startup. After installation, skills can be invoked by name:
 
 ```
-/tco-spec:spec-feature login-system
-/tco-spec:spec-implement docs/spec/login_feature.md
+$spec-feature login-system
+$spec-implement docs/spec/login_feature.md
 ```
+
+<details>
+<summary>Alternative: skills.sh registry</summary>
+
+```bash
+npx skills add fingergohappy/tco-spec
+```
+
+</details>
 
 ## Requirements
 
