@@ -6,5 +6,16 @@
     "name": "finger"
   },
   "license": "MIT",
-  "keywords": ["spec", "review", "multi-agent", "collaboration", "workflow"]
+  "keywords": ["spec", "review", "multi-agent", "collaboration", "workflow"],
+  "skills": [
+    "./skills/spec-feature",
+    "./skills/spec-change",
+    "./skills/spec-implement",
+    "./skills/spec-review",
+    "./skills/spec-feedback",
+    "./skills/spec-handle-feedback",
+    "./skills/spec-check-review",
+    "./skills/spec-fix-review",
+    "./skills/tmux-send"
+  ]
 }
