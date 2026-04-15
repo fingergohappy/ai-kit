@@ -1,0 +1,10 @@
+{
+  "name": "co-spec",
+  "version": "1.0.0",
+  "description": "多 Agent 协作规范插件 — spec 驱动的功能设计、变更记录、代码审查和反馈闭环工作流",
+  "author": {
+    "name": "finger"
+  },
+  "license": "MIT",
+  "keywords": ["spec", "review", "multi-agent", "collaboration", "workflow"]
+}
