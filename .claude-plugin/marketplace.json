@@ -1,0 +1,30 @@
+{
+  "name": "tco-spec",
+  "owner": {
+    "name": "finger",
+    "email": "fingergohappy@gmail.com"
+  },
+  "metadata": {
+    "description": "Multi-agent collaboration plugin — spec-driven workflow via tmux",
+    "version": "1.0.0"
+  },
+  "plugins": [
+    {
+      "name": "tco-spec",
+      "description": "Spec-driven multi-agent collaboration workflow: feature design, change tracking, task dispatch, code review, and feedback loop via tmux",
+      "source": "./",
+      "strict": false,
+      "skills": [
+        "./skills/spec-feature",
+        "./skills/spec-change",
+        "./skills/spec-implement",
+        "./skills/spec-review",
+        "./skills/spec-feedback",
+        "./skills/spec-handle-feedback",
+        "./skills/spec-check-review",
+        "./skills/spec-fix-review",
+        "./skills/tmux-send"
+      ]
+    }
+  ]
+}
