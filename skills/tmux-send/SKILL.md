@@ -31,8 +31,16 @@ Check `$ARGUMENTS` first, then fall back to natural language parsing:
 
 ## Sending content
 
+Use tmux paste buffer directly (no external script needed):
+
 ```bash
-bash ~/.claude/skills/tmux-send/scripts/tmux_send.sh "<pane_id>" "<content>"
+# 1. Verify the pane exists
+tmux list-panes -t "<pane_id>"
+
+# 2. Send content via paste buffer, then press Enter
+tmux load-buffer - <<< "<content>"
+tmux paste-buffer -p -r -t "<pane_id>"
+tmux send-keys -t "<pane_id>" Enter
 ```
 
-The script uses paste buffer to handle multi-line content, then sends Enter.
+This handles multi-line content correctly via paste buffer, then auto-presses Enter to execute.
