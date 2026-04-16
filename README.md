@@ -88,6 +88,7 @@ $spec-implement docs/spec/login_feature.md
 | `tco-spec:spec-check-review` | Verify review document accuracy and fix code |
 | `tco-spec:spec-fix-review` | Send review document to another agent for verification and fix |
 | `tco-spec:tmux-send` | Send text content to a tmux pane |
+| `tco-spec:wt-rebase` | Rebase worktree feature branch back to root via git-wt |
 
 ## Workflow
 
@@ -148,6 +149,26 @@ Agents use these tags to identify message types and route responses correctly.
 - tmux session with multiple panes
 - AI coding tool running in each pane (Claude Code, Codex, OpenCode, etc.)
 - `tco-spec:tmux-send` skill available for inter-pane communication
+
+### wt-rebase Extra Dependency
+
+The `wt-rebase` skill requires [git-wt](https://github.com/fingergohappy/git-wt):
+
+```bash
+# zsh plugin manager (e.g. zinit)
+zinit light fingergohappy/git-wt
+
+# or manual
+git clone https://github.com/fingergohappy/git-wt.git ~/git-wt
+source ~/git-wt/git-wt.plugin.zsh
+```
+
+Usage:
+
+```
+/tco-spec:wt-rebase                    # auto-detect current worktree
+/tco-spec:wt-rebase my-feature         # specify feature name
+```
 
 ## License
 

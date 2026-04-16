@@ -23,7 +23,8 @@
         "./skills/spec-handle-feedback",
         "./skills/spec-check-review",
         "./skills/spec-fix-review",
-        "./skills/tmux-send"
+        "./skills/tmux-send",
+        "./skills/wt-rebase"
       ]
     }
   ]
