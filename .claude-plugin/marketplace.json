@@ -24,7 +24,7 @@
         "./skills/spec-check-review",
         "./skills/spec-fix-review",
         "./skills/tmux-send",
-        "./skills/wt-rebase"
+        "./skills/rebase-to-root"
       ]
     }
   ]
