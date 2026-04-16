@@ -17,6 +17,11 @@ argument-hint: [feature 名称，留空则自动检测]
 > **注意**：root 的当前分支不一定是 main，可能是 dev、release 等任意分支。
 > rebase 的目标始终是 root 所在的分支，不是固定的 main。
 
+## 核心概念
+
+- **root**：主仓库目录（`.git` 所在目录）。无论当前在 root 还是 worktree，都可通过 `git rev-parse --git-common-dir` 的父目录定位。
+- **root 分支**：root 仓库当前 checkout 的分支，即 rebase 的目标分支。
+
 ## 前提条件
 
 - 当前处于 git 仓库中（root 或 worktree 均可）
@@ -24,16 +29,19 @@ argument-hint: [feature 名称，留空则自动检测]
 
 ## 执行步骤
 
-### 1. 判断当前所处位置
+### 1. 定位 root 和判断当前位置
 
 ```bash
-git rev-parse --show-toplevel
-git worktree list
+# 定位 root 目录（所有 worktree 共享的 .git 的父目录）
+PROJECT_ROOT="$(dirname "$(git rev-parse --git-common-dir)")"
+
+# 获取当前所在目录
+CURRENT_TOPLEVEL="$(git rev-parse --show-toplevel)"
 ```
 
-对比当前路径与 `git worktree list` 第一行（主仓库 root 路径）：
-- **在 worktree 中** → 直接获取当前分支名，跳到步骤 3
-- **在 root 中** → 进入步骤 2，让用户选择目标 worktree
+判断：
+- `$CURRENT_TOPLEVEL == $PROJECT_ROOT` → **在 root 中** → 进入步骤 2
+- `$CURRENT_TOPLEVEL != $PROJECT_ROOT` → **在 worktree 中** → 获取当前分支名，跳到步骤 3
 
 ### 2. 选择目标 worktree（仅在 root 中时执行）
 
@@ -55,7 +63,17 @@ git worktree list
 - 否则 → 询问用户选择哪个 worktree 进行 rebase
 - 如果只有一个 worktree → 直接使用，无需询问
 
-### 3. 检查 worktree 状态
+### 3. 确认 root 分支并检查 worktree 状态
+
+获取 rebase 目标分支：
+
+```bash
+git -C "$PROJECT_ROOT" branch --show-current
+```
+
+向用户确认：`将 rebase <feature-name> 到 root 分支 <root-branch>，是否继续？`
+
+检查 worktree 状态：
 
 ```bash
 git -C "<worktree-path>" status --porcelain
@@ -67,7 +85,7 @@ git -C "<worktree-path>" status --porcelain
 ### 4. 执行 rebase
 
 ```bash
-git -C "<project-root>" rebase "<feature-name>"
+git -C "$PROJECT_ROOT" rebase "<feature-name>"
 ```
 
 此命令将 feature 分支的提交 replay 到 root 当前分支上。
@@ -75,7 +93,7 @@ git -C "<project-root>" rebase "<feature-name>"
 ### 5. 检查 rebase 结果
 
 ```bash
-git -C "<project-root>" log --oneline -5
+git -C "$PROJECT_ROOT" log --oneline -5
 ```
 
 - 成功：root 分支已包含 feature 的所有提交
@@ -93,16 +111,17 @@ git -C "<project-root>" log --oneline -5
 
 1. 列出冲突文件：
    ```bash
-   git -C "<project-root>" diff --name-only --diff-filter=U
+   git -C "$PROJECT_ROOT" diff --name-only --diff-filter=U
    ```
 2. 报告冲突情况给用户，等待用户决定：
-   - 手动解决冲突后执行 `git -C "<project-root>" rebase --continue`
-   - 放弃 rebase：`git -C "<project-root>" rebase --abort`
+   - 手动解决冲突后执行 `git -C "$PROJECT_ROOT" rebase --continue`
+   - 放弃 rebase：`git -C "$PROJECT_ROOT" rebase --abort`
 
 ## 生成规则
 
-- 通过 `git worktree list` 判断当前位置和定位 root 路径
+- 通过 `git rev-parse --git-common-dir` 定位 root（比 `git worktree list` 第一行更可靠）
 - 在 root 中时，必须让用户选择或确认目标 worktree
+- rebase 前确认 root 当前分支并向用户展示，避免 rebase 到错误的分支
 - rebase 前必须确认工作已提交，避免丢失变更
 - rebase 失败时不自动 abort，让用户决定如何处理
 - 如果仓库没有任何 worktree，直接报错退出
