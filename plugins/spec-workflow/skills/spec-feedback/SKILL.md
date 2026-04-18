@@ -1,9 +1,7 @@
 ---
 name: spec-feedback
 model: haiku
-description: |
-  任务完成后向发起方反馈执行结果。当收到带有 [task from ...] 标签的消息
-  并完成任务后使用。当用户说"反馈"、"汇报结果"、"完成了"时触发。
+description: 任务完成后向发起方反馈执行结果
 disable-model-invocation: true
 argument-hint: [目标pane_id]
 context: fork
