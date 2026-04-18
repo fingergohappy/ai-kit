@@ -15,14 +15,14 @@
       "source": "./plugins/spec-workflow"
     },
     {
-      "name": "tmux-utils",
+      "name": "tmux",
       "description": "Tmux infrastructure utilities for inter-pane communication",
-      "source": "./plugins/tmux-utils"
+      "source": "./plugins/tmux"
     },
     {
-      "name": "git-utils",
+      "name": "git",
       "description": "Git worktree and branching utilities",
-      "source": "./plugins/git-utils"
+      "source": "./plugins/git"
     }
   ]
 }
