@@ -1,0 +1,38 @@
+{
+  "name": "spec-workflow",
+  "version": "1.0.0",
+  "description": "Spec-driven workflow for design docs, reviews, and tmux-based multi-agent handoffs.",
+  "author": {
+    "name": "finger",
+    "email": "fingergohappy@gmail.com",
+    "url": "https://github.com/fingergohappy"
+  },
+  "homepage": "https://github.com/fingergohappy/ai-kit/tree/main/plugins/spec-workflow",
+  "repository": "https://github.com/fingergohappy/ai-kit",
+  "license": "MIT",
+  "keywords": [
+    "spec",
+    "workflow",
+    "review",
+    "tmux",
+    "multi-agent"
+  ],
+  "skills": "./codex-skills/",
+  "interface": {
+    "displayName": "Spec Workflow",
+    "shortDescription": "Design, dispatch, review, and feedback skills for structured agent collaboration.",
+    "longDescription": "A spec-driven workflow plugin that turns design discussions into documents, dispatches work across tmux panes, reviews implementations, and closes the feedback loop.",
+    "developerName": "finger",
+    "category": "Productivity",
+    "capabilities": [
+      "Read",
+      "Write"
+    ],
+    "websiteURL": "https://github.com/fingergohappy/ai-kit",
+    "defaultPrompt": [
+      "Use spec-workflow:spec-feature to turn this requirement discussion into a design doc.",
+      "Use spec-workflow:spec-implement to send this design doc to another tmux pane.",
+      "Use spec-workflow:spec-review to compare the implementation against the design."
+    ]
+  }
+}

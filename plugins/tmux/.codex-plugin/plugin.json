@@ -1,0 +1,36 @@
+{
+  "name": "tmux",
+  "version": "1.0.0",
+  "description": "Tmux utilities for sending commands and text across panes.",
+  "author": {
+    "name": "finger",
+    "email": "fingergohappy@gmail.com",
+    "url": "https://github.com/fingergohappy"
+  },
+  "homepage": "https://github.com/fingergohappy/ai-kit/tree/main/plugins/tmux",
+  "repository": "https://github.com/fingergohappy/ai-kit",
+  "license": "MIT",
+  "keywords": [
+    "tmux",
+    "pane",
+    "terminal",
+    "automation"
+  ],
+  "skills": "./codex-skills/",
+  "interface": {
+    "displayName": "Tmux",
+    "shortDescription": "Send commands or content to other tmux panes.",
+    "longDescription": "Utilities for inter-pane communication in tmux-based workflows, including sending commands and multi-line text to another pane.",
+    "developerName": "finger",
+    "category": "Developer Tools",
+    "capabilities": [
+      "Read",
+      "Write"
+    ],
+    "websiteURL": "https://github.com/fingergohappy/ai-kit",
+    "defaultPrompt": [
+      "Use tmux:tmux-send to send this command to tmux pane %7.",
+      "Use tmux:tmux-send to paste a multi-line script into another pane."
+    ]
+  }
+}

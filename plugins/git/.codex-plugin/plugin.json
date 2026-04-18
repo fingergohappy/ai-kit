@@ -1,0 +1,37 @@
+{
+  "name": "git",
+  "version": "1.0.0",
+  "description": "Git worktree and branching utilities for rebasing and atomic commits.",
+  "author": {
+    "name": "finger",
+    "email": "fingergohappy@gmail.com",
+    "url": "https://github.com/fingergohappy"
+  },
+  "homepage": "https://github.com/fingergohappy/ai-kit/tree/main/plugins/git",
+  "repository": "https://github.com/fingergohappy/ai-kit",
+  "license": "MIT",
+  "keywords": [
+    "git",
+    "commit",
+    "rebase",
+    "worktree",
+    "workflow"
+  ],
+  "skills": "./codex-skills/",
+  "interface": {
+    "displayName": "Git",
+    "shortDescription": "Git commit and rebase helpers for multi-worktree repos.",
+    "longDescription": "Utilities for creating atomic commits and rebasing feature worktrees back onto the root repository branch.",
+    "developerName": "finger",
+    "category": "Coding",
+    "capabilities": [
+      "Read",
+      "Write"
+    ],
+    "websiteURL": "https://github.com/fingergohappy/ai-kit",
+    "defaultPrompt": [
+      "Use git:commit to create an atomic conventional commit for my current changes.",
+      "Use git:rebase-to-root to rebase this worktree onto the root repo branch."
+    ]
+  }
+}

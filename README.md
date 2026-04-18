@@ -56,28 +56,18 @@ claude --plugin-dir /path/to/ai-kit
 
 ### Codex (OpenAI)
 
-Use the built-in `$skill-installer` inside Codex to install from GitHub:
+This repository now includes Codex plugin manifests for `spec-workflow`, `tmux`, and `git`.
 
-```
-$skill-installer install https://github.com/fingergohappy/ai-kit/tree/main/skills/spec-feature
-```
+Detailed guide:
 
-Repeat for each skill you need, or install all at once by cloning:
+- [`docs/codex_plugin_install_update.md`](docs/codex_plugin_install_update.md)
 
-```bash
-# User scope (available across all projects)
-git clone https://github.com/fingergohappy/ai-kit.git ~/.agents/skills/ai-kit
+For personal installation, follow that document exactly. It covers:
 
-# Project scope (shared with team)
-git clone https://github.com/fingergohappy/ai-kit.git .agents/skills/ai-kit
-```
-
-After installation, restart Codex. Skills auto-discover on startup and can be invoked by name:
-
-```
-$spec-feature login-system
-$spec-implement docs/spec/login_feature.md
-```
+- copying plugins into `~/.codex/plugins/`
+- creating `~/.agents/plugins/marketplace.json`
+- restarting Codex and enabling `spec-workflow`, `tmux`, and `git`
+- installing custom agents with `bash scripts/install_codex_agents.sh`
 
 ## Plugins
 
