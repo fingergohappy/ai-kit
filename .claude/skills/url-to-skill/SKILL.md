@@ -5,7 +5,7 @@ description: |
   自动抓取内容并生成 SKILL.md 保存到 .claude/skills/ 目录。
   当用户说"转成 skill"、"从链接生成 skill"、"把这个变成 skill"时触发。
 model: haiku
-context: subagent
+context: fork
 argument-hint: <URL>
 ---
 
