@@ -31,14 +31,18 @@ Register this repository as a plugin marketplace, then install:
 Install the plugin:
 
 ```
-/plugin install ai-kit@ai-kit
+/plugin install spec-workflow@ai-kit
+/plugin install tmux@ai-kit
+/plugin install git@ai-kit
 ```
 
-After installation, restart Claude Code. Skills will be available with the `ai-kit:` prefix:
+After installation, restart Claude Code. Skills will be available with the plugin prefix:
 
 ```
-/ai-kit:spec-feature login-system
-/ai-kit:spec-implement docs/spec/login_feature.md
+/spec-workflow:spec-feature login-system
+/spec-workflow:spec-implement docs/spec/login_feature.md
+/git:commit
+/tmux:tmux-send %7 "hello"
 ```
 
 <details>
@@ -75,27 +79,46 @@ $spec-feature login-system
 $spec-implement docs/spec/login_feature.md
 ```
 
-## Skills
+## Plugins
+
+### spec-workflow
+
+Spec-driven workflow: design docs, code review, and feedback loop.
 
 | Skill | Purpose |
 |-------|---------|
-| `ai-kit:spec-feature` | Generate feature design documents from discussions |
-| `ai-kit:spec-change` | Generate change documents for refactoring/modifications |
-| `ai-kit:spec-implement` | Dispatch tasks to a remote agent's tmux pane |
-| `ai-kit:spec-review` | Review code against design documents |
-| `ai-kit:spec-feedback` | Send execution results back to the task originator |
-| `ai-kit:spec-handle-feedback` | Process feedback, trigger review, and decide next steps |
-| `ai-kit:spec-check-review` | Verify review document accuracy and fix code |
-| `ai-kit:spec-fix-review` | Send review document to another agent for verification and fix |
-| `ai-kit:tmux-send` | Send text content to a tmux pane |
-| `ai-kit:rebase-to-root` | Rebase worktree feature branch back to root's current branch |
+| `spec-workflow:spec-feature` | Generate feature design documents from discussions |
+| `spec-workflow:spec-change` | Generate change documents for refactoring/modifications |
+| `spec-workflow:spec-implement` | Send design document to a tmux pane for execution |
+| `spec-workflow:spec-review` | Review code against design documents |
+| `spec-workflow:spec-feedback` | Send execution results back to the task originator |
+| `spec-workflow:spec-handle-feedback` | Review code completion, check against original design, decide next steps |
+| `spec-workflow:spec-check-review` | Verify review document accuracy and fix code |
+| `spec-workflow:spec-fix-review` | Send review document to a tmux pane for verification and fix |
+
+### tmux
+
+Tmux infrastructure utilities for inter-pane communication.
+
+| Skill | Purpose |
+|-------|---------|
+| `tmux:tmux-send` | Send text content to a tmux pane |
+
+### git
+
+Git worktree and branching utilities.
+
+| Skill | Purpose |
+|-------|---------|
+| `git:rebase-to-root` | Rebase worktree feature branch back to root's current branch (supports both worktree and root invocation) |
+| `git:commit` | Create atomic git commits with validation and conventional commit messages |
 
 ## Workflow
 
 ### 1. Design Phase
 
 ```
-/ai-kit:spec-feature <feature-name>   # or /ai-kit:spec-change <change-name>
+/spec-workflow:spec-feature <feature-name>   # or /spec-workflow:spec-change <change-name>
 ```
 
 Enter design discussion mode — discuss without writing code, generate document when ready.
@@ -103,14 +126,14 @@ Enter design discussion mode — discuss without writing code, generate document
 ### 2. Implementation Phase
 
 ```
-/ai-kit:spec-implement <doc-path>
+/spec-workflow:spec-implement <doc-path>
 ```
 
 Send the design document to another agent's tmux pane. The receiving agent gets a `[task from ...]` labeled message with clear instructions and a feedback directive.
 
 ### 3. Feedback Loop
 
-The implementer completes work and calls `ai-kit:spec-feedback` to send results back:
+The implementer completes work and calls `spec-workflow:spec-feedback` to send results back:
 
 ```
 [feedback from Claude Code: implemented 3 tasks, pane_id: %5]
@@ -118,14 +141,14 @@ The implementer completes work and calls `ai-kit:spec-feedback` to send results 
 
 ### 4. Review & Fix
 
-The originator receives feedback and `ai-kit:spec-handle-feedback` triggers automatically:
+The originator receives feedback and `spec-workflow:spec-handle-feedback` triggers automatically:
 
-- Calls `ai-kit:spec-review` to review the code
-- If issues found → sends fix tasks back via `ai-kit:spec-implement` (up to 3 rounds)
+- Calls `spec-workflow:spec-review` to review the code
+- If issues found → sends fix tasks back via `spec-workflow:spec-implement` (up to 3 rounds)
 - If all passed → done
 
 ```
-/ai-kit:spec-fix-review <review-doc>   # Send review to another agent for fix
+/spec-workflow:spec-fix-review <review-doc>   # Send review to another pane for fix
 ```
 
 ## Message Protocol
@@ -148,17 +171,19 @@ Agents use these tags to identify message types and route responses correctly.
 
 - tmux session with multiple panes
 - AI coding tool running in each pane (Claude Code, Codex, OpenCode, etc.)
-- `ai-kit:tmux-send` skill available for inter-pane communication
+- `tmux:tmux-send` skill available for inter-pane communication
 
 ### rebase-to-root
 
 No extra dependencies — uses native `git worktree` and `git rebase` commands (requires git 2.5+).
 
-Usage:
+Supports two invocation modes:
+- In a worktree: auto-detects current branch and rebases back to root
+- In root: lists all worktrees for selection
 
 ```
-/ai-kit:rebase-to-root                    # auto-detect current worktree
-/ai-kit:rebase-to-root my-feature         # specify feature name
+/git:rebase-to-root                    # auto-detect or select worktree
+/git:rebase-to-root my-feature         # specify feature name
 ```
 
 ## License
