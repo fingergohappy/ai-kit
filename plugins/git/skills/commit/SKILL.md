@@ -107,13 +107,12 @@ git diff --cached
 - 不加句号
 - 控制在 72 字符以内
 - 描述改了什么，而不是实现步骤
-- 不加 emoji
 
 示例：
 
-- `feat: add codex commit workflow prompt`
-- `fix: handle empty staged diff before commit`
-- `docs: clarify codex sync behavior`
+- `✨ feat: add codex commit workflow prompt`
+- `🐛 fix: handle empty staged diff before commit`
+- `📝 docs: clarify codex sync behavior`
 
 ---
 
