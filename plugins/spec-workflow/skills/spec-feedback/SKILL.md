@@ -57,7 +57,7 @@ context: fork
 
 ---
 
-请调用 spec-handle-feedback skill 检查以上反馈。
+使用 spec-handle-feedback skill 检查以上反馈。
 
 [feedback from {当前AI工具名称}, pane_id: {当前pane_id}: {执行结果简要描述}]
 ```

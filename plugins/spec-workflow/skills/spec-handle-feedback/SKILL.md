@@ -55,7 +55,7 @@ $ARGUMENTS
 
 ### 建议
 
-{如果需要修复，给出修复任务清单，主对话可以用 spec-implement 发起下一轮}
+{如果需要修复，给出修复任务清单，主对话可以用 spec-implement skill 发起下一轮}
 ```
 
 ## 终止条件
