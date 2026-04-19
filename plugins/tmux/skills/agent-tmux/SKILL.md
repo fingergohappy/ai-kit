@@ -1,110 +1,103 @@
 ---
 name: agent-tmux
-description: Use when an agent needs to start, restart, or inspect a long-running project command in a shared tmux session using a project path and startup command.
+model: haiku
+description: |
+  Start, restart, stop, or inspect long-running commands in a shared tmux session.
+  Auto-isolates by project path and git branch to prevent conflicts.
+  Use when user says "启动 dev server", "run in tmux", "后台运行", "长期运行服务".
+arguments:
+  - name: path
+    description: 项目目录路径
+    required: true
+  - name: command
+    description: 启动命令（如 npm run dev）
+    required: false
+context: fork
 ---
 
 # agent-tmux
 
-当 agent 需要在共享 `tmux` 会话中启动或管理长期运行的服务时，给它两项输入即可：
+在共享 tmux 会话中管理长期运行的服务，自动按项目目录和 git 分支隔离窗口。
 
-- `path`：项目目录
-- `启动命令`：例如 `npm run dev`、`python -m http.server 8000`
+## 核心行为
 
-优先直接执行 skill 自带脚本 `scripts/agent-tmux`。
+- **窗口命名**: `<项目名>_<分支名>`（从 git 信息派生）
+- **会话**: 固定使用 `agent-dev` session
+- **幂等性**: 已运行的服务不会重复启动
+- **优先使用**: `scripts/agent-tmux` 脚本，不要假设全局命令存在
 
-- 不要假设存在全局 `agent-tmux` 命令
-- 不要绕过 `scripts/agent-tmux` 手工重写 tmux 管理逻辑
-- 相对路径按当前 skill 目录解析；默认直接运行 `scripts/agent-tmux ...`
+## Workflow
 
-工具会自动按 `项目名_分支` 派生 window 名。
+1. 解析 `path` 参数（必需）和启动命令
+2. 检查 git 仓库获取分支名，非 git 目录只使用目录名
+3. 执行对应命令：
+   - `start`: 幂等启动，已运行时返回现有窗口
+   - `restart`: 发送 C-c 中断后重启
+   - `stop`: 发送 C-c 信号
+   - `status`: 检查运行状态（RUNNING/IDLE/NONE）
+   - `exists`: 检查窗口是否存在（exit code）
+   - `window`: 获取窗口名
 
-- window 不存在：创建 window 并启动命令
-- window 已存在且前台已有非 shell 进程：视为已运行，直接返回窗口信息，不重启
-- window 已存在但只有 shell 空闲：在该 window 里启动命令
-
-## 何时使用
-
-- 用户要求把 dev server、后台任务或长期运行命令放进 `tmux` 里
-- 需要按项目目录和 git 分支自动隔离 window
-- 需要后续通过 `tmux` 查看输出、重启或停止进程
-
-## 快速开始
+## 快速示例
 
 ```bash
 # 启动服务
-scripts/agent-tmux start --path /path/to/project -- <命令...>
+scripts/agent-tmux start --path ~/myproject -- npm run dev
 
-# 示例
-scripts/agent-tmux start --path ~/myproject -- python -m http.server 8000
+# 重启服务
+scripts/agent-tmux restart --path ~/myproject -- python -m http.server 8000
 
-# 重启
-scripts/agent-tmux restart --path /path/to/project -- <命令...>
+# 检查状态
+scripts/agent-tmux status --path ~/myproject
+# 输出: RUNNING 或 IDLE
 
-# 停止
-scripts/agent-tmux stop --path /path/to/project
-
-# 查看状态
-scripts/agent-tmux status --path /path/to/project
-
-# 检查窗口是否存在（返回 exit code）
-scripts/agent-tmux exists --path /path/to/project
-
-# 获取窗口名
-scripts/agent-tmux window --path /path/to/project
-```
-
-## 命令约束
-
-- 不要把启动命令包装成 `sh -lc ...` 或 `bash -lc ...`
-- 直接把原始命令放在 `--` 后面，让 tmux window 里的 shell 自己执行
-- 需要重定向、管道或 `&&` 时，也直接传原始 shell 命令，例如 `atlas-run --http-port 2991 2>&1 | tee -a ./atlas-run.log`
-
-## 辅助命令
-
-| 命令 | 说明 | 输出 |
-|------|------|------|
-| `exists --path <path>` | 检查窗口是否存在 | exit code: 0=存在, 1=不存在 |
-| `window --path <path>` | 获取窗口名 | `project_branch` |
-
-```bash
-# 使用示例
+# 检查是否存在（用于脚本判断）
 if scripts/agent-tmux exists --path ~/myproject; then
     echo "服务已运行"
-else
-    scripts/agent-tmux start --path ~/myproject -- npm run dev
 fi
 
-# 获取窗口名用于其他操作
+# 获取窗口名
 WINDOW=$(scripts/agent-tmux window --path ~/myproject)
 tmux capture-pane -t agent-dev:$WINDOW -p
 ```
 
+## 启动逻辑
+
+```
+检查窗口是否存在？
+  ↓
+ 否 → 创建新窗口并启动命令
+ 是 → 检查前台进程？
+        ↓
+       有进程 → 返回 existing/RUNNING（不重启）
+       只有 shell → 直接启动命令
+```
+
+## 命令约束
+
+- 不要包装成 `sh -lc ...` 或 `bash -lc ...`
+- 直接把原始命令放在 `--` 后面
+- 需要重定向、管道时直接传原始命令：
+  ```bash
+  scripts/agent-tmux start --path ~/project -- atlas-run --http-port 2991 2>&1 | tee -a ./atlas-run.log
+  ```
+
 ## 命名规则
 
-| 组件 | 值 |
-|------|-----|
-| **会话** | 固定：`agent-dev` |
-| **窗口** | `<project>_<branch>`（从 path 的 git 信息派生） |
+| 组件 | 值 | 示例 |
+|------|-----|------|
+| 会话 | 固定 `agent-dev` | `agent-dev` |
+| 窗口 | `<项目名>_<分支名>` | `jira-infraflow_feat-login` |
 
-示例：`/home/user/jira-infraflow` 在 `feat/login` 分支上启动，窗口名为 `jira-infraflow_feat-login`。
+非 git 目录：窗口名 = 目录名（无分支后缀）
 
-## 启动行为
+## 状态说明
 
-```
-窗口存在？
-  ↓
- 否 → 创建新窗口并启动
- 是 → window 前台有非 shell 进程？
-        ↓
-       是 → 返回 existing / RUNNING，不重启
-       否 → 复用现有 window 启动命令
-```
-
-同一个 path 就是同一个应用，不存在窗口名冲突。
-
-## 非 git 目录
-
-路径不是 git 仓库时，窗口名为目录名（无分支后缀）。
+| 状态 | 含义 |
+|------|------|
+| `RUNNING` | 窗口前台有非 shell 进程在运行 |
+| `IDLE` | 窗口存在但只有 shell 空闲 |
+| `NONE` | 窗口不存在 |
 
 ## 查看输出
 
@@ -112,13 +105,9 @@ tmux capture-pane -t agent-dev:$WINDOW -p
 # 附加到共享会话
 tmux attach -t agent-dev
 
-# 查看特定窗口
+# 查看特定窗口输出
 tmux capture-pane -t agent-dev:<window> -p
+
+# 列出所有窗口
+tmux list-windows -t agent-dev
 ```
-
-## 行为说明
-
-- **start**: 幂等启动。已运行时返回已有 window，不重启。
-- **restart**: 先向现有 window 发送 `C-c`，再直接发送新命令，不重建 pane。
-- **status**: `RUNNING` 表示 window 前台有非 shell 进程；`IDLE` 表示 window 存在但当前只有 shell。
-- **stop**: 发送 `C-c` 信号，不保证进程一定停止
