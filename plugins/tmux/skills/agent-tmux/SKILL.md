@@ -5,13 +5,7 @@ description: |
   Start, restart, stop, or inspect long-running commands in a shared tmux session.
   Auto-isolates by project path and git branch to prevent conflicts.
   Use when user says "启动 dev server", "run in tmux", "后台运行", "长期运行服务".
-arguments:
-  - name: path
-    description: 项目目录路径
-    required: true
-  - name: command
-    description: 启动命令（如 npm run dev）
-    required: false
+argument-hint: <path> [-- <command>]
 context: fork
 ---
 
