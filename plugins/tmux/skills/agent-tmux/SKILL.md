@@ -17,6 +17,10 @@ context: fork
 
 `plugins/tmux/skills/agent-tmux/scripts/agent-tmux`
 
+## 命令约束
+
+- `--cmd` 后面直接传原始命令,不要对输入的命令做任包装成 `sh -lc ...` 或 `bash -lc ...`
+
 ## Workflow
 
 1. 先调用 `status` 检查当前运行状态
@@ -26,7 +30,3 @@ context: fork
    - 要查看状态：直接报告 `status` 输出
 3. 报告脚本输出结果给用户
 
-## 命令约束
-
-- 不要包装成 `sh -lc ...` 或 `bash -lc ...`
-- `--cmd` 后面直接传原始命令
