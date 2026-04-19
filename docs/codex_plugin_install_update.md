@@ -145,7 +145,7 @@ bash scripts/install_codex_agents.sh
 这个脚本现在会同时做两件事：
 
 1. 生成 custom agents 到 `~/.codex/agents/`
-2. 为 `plugins/*/codex-skills/*` 在 `~/.agents/skills/` 下创建同名 symlink
+2. 为 `plugins/*/skills/*` 在 `~/.agents/skills/` 下创建同名 symlink
 
 这样即使你还没在 Codex 的 Plugins 面板里真正点安装，`list skills` 也能直接看到：
 

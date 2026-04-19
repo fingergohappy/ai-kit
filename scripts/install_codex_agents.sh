@@ -81,7 +81,7 @@ if [[ "${INSTALL_SKILL_LINKS}" -eq 1 ]]; then
   mkdir -p "${SKILLS_TARGET_DIR}"
 
   linked=0
-  for skills_root in "${REPO_ROOT}"/plugins/*/codex-skills; do
+  for skills_root in "${REPO_ROOT}"/plugins/*/skills; do
     if [[ ! -d "${skills_root}" ]]; then
       continue
     fi
