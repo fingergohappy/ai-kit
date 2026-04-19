@@ -88,11 +88,12 @@ Spec-driven workflow: design docs, code review, and feedback loop.
 
 ### tmux
 
-Tmux infrastructure utilities for inter-pane communication.
+Tmux infrastructure utilities for inter-pane communication and long-running service management.
 
 | Skill | Purpose |
 |-------|---------|
 | `tmux:tmux-send` | Send text content to a tmux pane |
+| `tmux:agent-tmux` | Start/restart/stop long-running commands in shared tmux session (auto-isolates by project/branch) |
 
 ### git
 
