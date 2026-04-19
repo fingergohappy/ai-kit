@@ -5,7 +5,6 @@ description: |
   当 AI agent 收到 review 文档并需要验证、修复时使用。
   即使用户只是说"检查 review"、"验证 review"、"处理 review 文档"，
   都应触发此 skill。
-disable-model-invocation: true
 argument-hint: [review文档路径]
 ---
 

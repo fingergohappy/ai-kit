@@ -5,7 +5,6 @@ description: |
   审查代码完成情况，对照原始设计逐条检查并决定下一步。
   当收到带有 [feedback from ...] 标签的消息时触发。
   当用户说"处理反馈"、"看看反馈"、"检查结果"时触发。
-disable-model-invocation: true
 argument-hint: [反馈消息内容]
 context: fork
 ---

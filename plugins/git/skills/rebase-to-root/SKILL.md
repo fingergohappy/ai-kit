@@ -6,7 +6,6 @@ description: |
   支持在 worktree 中直接调用（自动检测当前分支），也支持在 root 中调用（列出所有 worktree 供选择）。
   即使用户只是说"rebase"、"合回去"、"merge 回去"、"rebase 到 root"，
   都应触发此 skill。
-disable-model-invocation: true
 argument-hint: [feature 名称，留空则自动检测]
 ---
 

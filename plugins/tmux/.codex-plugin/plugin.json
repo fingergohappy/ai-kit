@@ -16,7 +16,7 @@
     "terminal",
     "automation"
   ],
-  "skills": "./codex-skills/",
+  "skills": "./skills/",
   "interface": {
     "displayName": "Tmux",
     "shortDescription": "Send commands or content to other tmux panes.",

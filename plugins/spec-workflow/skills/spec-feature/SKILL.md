@@ -8,7 +8,6 @@ description: |
   当讨论新功能设计、功能规划、特性提案时使用。
   即使用户没有明确要求"生成文档"，只要对话中涉及新功能的需求讨论、
   架构设计、接口定义，都应使用此 skill。
-disable-model-invocation: true
 argument-hint: [功能名称]
 ---
 

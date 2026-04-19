@@ -5,7 +5,6 @@ description: |
   将设计文档发送到指定 tmux pane 执行。
   执行完成后会通过 spec-feedback 反馈结果。
   当用户说"发过去"、"send 过去"、"开始干"、"implement"时触发。
-disable-model-invocation: true
 argument-hint: [文档路径, 如 docs/spec/xxx_feature.md]
 context: fork
 ---

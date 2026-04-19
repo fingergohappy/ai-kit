@@ -6,7 +6,6 @@ description: |
   想让另一个 agent 去修复其中列出的问题时使用。
   即使用户只是说"修复 review"、"执行修复"、"fix review"，
   都应触发此 skill。
-disable-model-invocation: true
 argument-hint: [review文档路径, 如 docs/spec/xxx_review.md]
 ---
 

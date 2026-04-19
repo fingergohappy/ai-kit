@@ -17,7 +17,7 @@
     "tmux",
     "multi-agent"
   ],
-  "skills": "./codex-skills/",
+  "skills": "./skills/",
   "interface": {
     "displayName": "Spec Workflow",
     "shortDescription": "Design, dispatch, review, and feedback skills for structured agent collaboration.",

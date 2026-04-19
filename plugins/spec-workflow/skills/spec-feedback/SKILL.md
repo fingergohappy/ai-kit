@@ -2,7 +2,6 @@
 name: spec-feedback
 model: haiku
 description: 任务完成后向发起方反馈执行结果
-disable-model-invocation: true
 argument-hint: [目标pane_id]
 context: fork
 ---

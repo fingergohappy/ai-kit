@@ -17,7 +17,7 @@
     "worktree",
     "workflow"
   ],
-  "skills": "./codex-skills/",
+  "skills": "./skills/",
   "interface": {
     "displayName": "Git",
     "shortDescription": "Git commit and rebase helpers for multi-worktree repos.",

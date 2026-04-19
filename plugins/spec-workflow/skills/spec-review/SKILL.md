@@ -5,7 +5,6 @@ description: |
   当代码实现完成后、提交前、或需要对照设计文档检查实现一致性时使用。
   即使用户没有明确要求"审查"，只要对话中涉及实现与设计的对照检查、
   代码质量评估，都应使用此 skill。
-disable-model-invocation: true
 argument-hint: [审查名称]
 ---
 

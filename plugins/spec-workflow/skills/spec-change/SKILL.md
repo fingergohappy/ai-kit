@@ -8,7 +8,6 @@ description: |
   当讨论代码重构、API 变更、模块修改、破坏性改动时使用。
   即使用户没有明确要求"生成文档"，只要对话中涉及对现有代码的修改计划，
   都应使用此 skill。
-disable-model-invocation: true
 argument-hint: [变更名称]
 ---
 
