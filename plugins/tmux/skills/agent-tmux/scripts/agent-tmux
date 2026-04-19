@@ -1,22 +1,19 @@
 #!/bin/bash
 # agent-tmux - Minimal tmux-based service runner for AI agents
-# Usage: agent-tmux <command> --path <path> [-- <cmd...>]
+# Usage: agent-tmux <command> --path <path> [--cmd <command>]
 
 set -euo pipefail
 
 SESSION="agent-dev"
 PROJECT_PATH=""
+COMMAND=""
 
 # Sanitize a string for use in tmux window names
 sanitize() {
     local s="$1"
-    # Replace / with _
     s="${s//\//_}"
-    # Avoid "." because tmux target parsing treats it as a pane separator.
     s=$(echo "$s" | sed 's/[^A-Za-z0-9_-]/_/g')
-    # Collapse repeated _
     s=$(echo "$s" | sed 's/_\+/_/g')
-    # Remove leading/trailing _
     s="${s#_}"
     s="${s%_}"
     echo "$s"
@@ -32,38 +29,32 @@ derive_window_name() {
         exit 1
     fi
 
-    # Check if path is a git repo
     if git -C "$path" rev-parse --is-inside-work-tree >/dev/null 2>&1; then
-        repo_name=$(basename "$(git -C "$path" rev-parse --show-toplevel)")
+        repo_name=$(basename -s .git "$(git -C "$path" config --get remote.origin.url)" 2>/dev/null || basename "$(git -C "$path" rev-parse --show-toplevel)")
         branch_name=$(git -C "$path" symbolic-ref --quiet --short HEAD 2>/dev/null || echo "detached")
         repo_name=$(sanitize "$repo_name")
         branch_name=$(sanitize "$branch_name")
         echo "${repo_name}_${branch_name}"
     else
-        # Not a git repo, use directory name only
         repo_name=$(basename "$path")
         repo_name=$(sanitize "$repo_name")
         echo "$repo_name"
     fi
 }
 
-# Ensure session exists
 ensure_session() {
     if ! tmux has-session -t "$SESSION" 2>/dev/null; then
         tmux new-session -d -s "$SESSION" -n "__default__"
     fi
 }
 
-# Check if window exists
 window_exists() {
     local window="$1"
     tmux list-windows -t "$SESSION" -F "#{window_name}" 2>/dev/null | grep -q "^${window}$"
 }
 
-# Treat shell prompts as idle; any other foreground command means the window is busy.
 is_shell_command() {
     local cmd="$1"
-
     case "$cmd" in
         ""|bash|zsh|sh|fish|dash|ksh|tcsh|csh)
             return 0
@@ -102,20 +93,16 @@ wait_for_window_idle() {
     return 1
 }
 
-# Start or ensure a service is running
-cmd_start() {
-    local cmd=""
-
-    # Parse --path
+parse_common_args() {
     while [[ $# -gt 0 ]]; do
         case "$1" in
             --path)
                 PROJECT_PATH="$2"
                 shift 2
                 ;;
-            --)
+            --cmd)
                 shift
-                cmd="$*"
+                COMMAND="$*"
                 break
                 ;;
             *)
@@ -123,9 +110,14 @@ cmd_start() {
                 ;;
         esac
     done
+}
+
+# Start or ensure a service is running
+cmd_start() {
+    parse_common_args "$@"
 
     [[ -n "$PROJECT_PATH" ]] || { echo "Error: --path required" >&2; exit 1; }
-    [[ -n "$cmd" ]] || { echo "Error: command required after --" >&2; exit 1; }
+    [[ -n "$COMMAND" ]] || { echo "Error: --cmd required" >&2; exit 1; }
 
     local window
     window=$(derive_window_name "$PROJECT_PATH")
@@ -138,39 +130,22 @@ cmd_start() {
             return 0
         fi
 
-        tmux send-keys -t "${SESSION}:${window}" "$cmd" Enter
+        tmux send-keys -t "${SESSION}:${window}" "$COMMAND" Enter
         echo "Started: ${SESSION}:${window}"
         return 0
     fi
 
     tmux new-window -d -t "$SESSION" -n "$window" -c "$PROJECT_PATH"
-    tmux send-keys -t "${SESSION}:${window}" "$cmd" Enter
+    tmux send-keys -t "${SESSION}:${window}" "$COMMAND" Enter
     echo "Started: ${SESSION}:${window}"
 }
 
 # Restart a service (force fresh process)
 cmd_restart() {
-    local cmd=""
-
-    while [[ $# -gt 0 ]]; do
-        case "$1" in
-            --path)
-                PROJECT_PATH="$2"
-                shift 2
-                ;;
-            --)
-                shift
-                cmd="$*"
-                break
-                ;;
-            *)
-                shift
-                ;;
-        esac
-    done
+    parse_common_args "$@"
 
     [[ -n "$PROJECT_PATH" ]] || { echo "Error: --path required" >&2; exit 1; }
-    [[ -n "$cmd" ]] || { echo "Error: command required after --" >&2; exit 1; }
+    [[ -n "$COMMAND" ]] || { echo "Error: --cmd required" >&2; exit 1; }
 
     local window
     window=$(derive_window_name "$PROJECT_PATH")
@@ -186,30 +161,19 @@ cmd_restart() {
             }
         fi
 
-        tmux send-keys -t "${SESSION}:${window}" "$cmd" Enter
+        tmux send-keys -t "${SESSION}:${window}" "$COMMAND" Enter
         echo "Restarted: ${SESSION}:${window}"
         return 0
     fi
 
     tmux new-window -d -t "$SESSION" -n "$window" -c "$PROJECT_PATH"
-    tmux send-keys -t "${SESSION}:${window}" "$cmd" Enter
+    tmux send-keys -t "${SESSION}:${window}" "$COMMAND" Enter
     echo "Started: ${SESSION}:${window}"
 }
 
 # Stop a service
 cmd_stop() {
-    # Parse --path
-    while [[ $# -gt 0 ]]; do
-        case "$1" in
-            --path)
-                PROJECT_PATH="$2"
-                shift 2
-                ;;
-            *)
-                shift
-                ;;
-        esac
-    done
+    parse_common_args "$@"
 
     [[ -n "$PROJECT_PATH" ]] || { echo "Error: --path required" >&2; exit 1; }
 
@@ -225,20 +189,9 @@ cmd_stop() {
     echo "Stopped: ${SESSION}:${window}"
 }
 
-# Check if window exists for path (returns 0 if exists, 1 if not)
+# Check if window exists for path
 cmd_exists() {
-    # Parse --path
-    while [[ $# -gt 0 ]]; do
-        case "$1" in
-            --path)
-                PROJECT_PATH="$2"
-                shift 2
-                ;;
-            *)
-                shift
-                ;;
-        esac
-    done
+    parse_common_args "$@"
 
     [[ -n "$PROJECT_PATH" ]] || { echo "Error: --path required" >&2; exit 1; }
 
@@ -254,18 +207,7 @@ cmd_exists() {
 
 # Get window name for path
 cmd_window() {
-    # Parse --path
-    while [[ $# -gt 0 ]]; do
-        case "$1" in
-            --path)
-                PROJECT_PATH="$2"
-                shift 2
-                ;;
-            *)
-                shift
-                ;;
-        esac
-    done
+    parse_common_args "$@"
 
     [[ -n "$PROJECT_PATH" ]] || { echo "Error: --path required" >&2; exit 1; }
 
@@ -274,18 +216,7 @@ cmd_window() {
 
 # Show status
 cmd_status() {
-    # Parse --path
-    while [[ $# -gt 0 ]]; do
-        case "$1" in
-            --path)
-                PROJECT_PATH="$2"
-                shift 2
-                ;;
-            *)
-                shift
-                ;;
-        esac
-    done
+    parse_common_args "$@"
 
     [[ -n "$PROJECT_PATH" ]] || { echo "Error: --path required" >&2; exit 1; }
 
@@ -315,11 +246,11 @@ cmd_status() {
 # Show usage
 cmd_usage() {
     cat <<'EOF'
-Usage: agent-tmux <command> --path <path> [-- <cmd...>]
+Usage: agent-tmux <command> --path <path> [--cmd <command>]
 
 Commands:
-  start --path <path> -- <command...>   Start if idle, or report existing running service
-  restart --path <path> -- <command...> Force restart a service
+  start --path <path> --cmd <command>   Start if idle, or report existing running service
+  restart --path <path> --cmd <command> Force restart a service
   stop --path <path>                    Stop a service (send C-c)
   status --path <path>                  Show status (RUNNING/IDLE)
   exists --path <path>                  Check if window exists (exit code 0/1)
@@ -330,7 +261,7 @@ Session:
   Window: <project>_<branch> (derived from path's git info)
 
 Examples:
-  agent-tmux start --path ~/myproject -- python -m http.server 8000
+  agent-tmux start --path ~/myproject --cmd "npm run dev"
   agent-tmux exists --path ~/myproject && echo "running"
   agent-tmux window --path ~/myproject
 EOF

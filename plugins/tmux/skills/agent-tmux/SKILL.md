@@ -5,7 +5,7 @@ description: |
   Start, restart, stop, or inspect long-running commands in a shared tmux session.
   Auto-isolates by project path and git branch to prevent conflicts.
   Use when user says "启动 dev server", "run in tmux", "后台运行", "长期运行服务".
-argument-hint: <path> [-- <command>]
+argument-hint: <path> [--cmd <command>]
 context: fork
 ---
 
@@ -20,14 +20,10 @@ context: fork
 ## Workflow
 
 1. 解析用户意图，确定操作：`start` / `restart` / `stop` / `status`
-2. 根据 `path` 获取 window 名：
-   - 判断是否 git 目录：`git -C "$path" rev-parse --is-inside-work-tree`
-   - 是 git 目录：项目名 = `basename "$(git -C "$path" rev-parse --show-toplevel)"`，分支名 = `git -C "$path" symbolic-ref --quiet --short HEAD`，window = `${项目名}_${分支名}`
-   - 非 git 目录：window = `basename "$path"`
-3. 调用脚本执行，所有判断逻辑由脚本内部处理
-4. 报告脚本输出结果给用户
+2. 调用脚本执行，所有判断逻辑由脚本内部处理
+3. 报告脚本输出结果给用户
 
 ## 命令约束
 
 - 不要包装成 `sh -lc ...` 或 `bash -lc ...`
-- 直接把原始命令放在 `--` 后面
+- `--cmd` 后面直接传原始命令
