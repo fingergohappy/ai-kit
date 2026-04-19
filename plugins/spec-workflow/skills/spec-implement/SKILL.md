@@ -22,10 +22,16 @@ $ARGUMENTS
    ```bash
    echo $TMUX_PANE
    ```
-2. 读取 $ARGUMENTS 中指定的文档路径，如果参数不是文件路径，则将参数内容作为内联任务发送
-3. 如果文档有 frontmatter，将 `status` 从 `draft` 改为 `doing`
-4. 按下面的格式生成消息
-5. 通过 tmux-send skill 发送
+2. 确定目标 pane_id:
+   - 如果 $ARGUMENTS 中指定了 pane_id（格式如 `@pane_id` 或 `pane_id:`），使用指定的 pane_id
+   - 如果未指定，列出可用 pane 供用户选择：
+     ```bash
+     tmux list-panes -F "#{pane_id}: #{pane_current_command} [#{pane_width}x#{pane_height}]"
+     ```
+3. 读取 $ARGUMENTS 中指定的文档路径，如果参数不是文件路径，则将参数内容作为内联任务发送
+4. 如果文档有 frontmatter，将 `status` 从 `draft` 改为 `doing`
+5. 按下面的格式生成消息
+6. 通过 tmux-send skill 发送到目标 pane
 
 ## 发送格式
 
