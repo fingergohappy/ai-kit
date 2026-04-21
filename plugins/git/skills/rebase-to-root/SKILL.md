@@ -89,16 +89,26 @@ git -C "$PROJECT_ROOT" rebase "<feature-name>"
 
 此命令将 feature 分支的提交 replay 到 root 当前分支上。
 
-### 5. 检查 rebase 结果
+### 5. Forward worktree 分支
+
+rebase 成功后，root 分支已前进，但 worktree 的 feature 分支仍指向旧位置。需要将 worktree forward 到 root 当前分支：
+
+```bash
+git -C "<worktree-path>" rebase "<root-branch>"
+```
+
+这样 feature 分支就与 root 当前分支保持同步。
+
+### 6. 检查结果
 
 ```bash
 git -C "$PROJECT_ROOT" log --oneline -5
 ```
 
-- 成功：root 分支已包含 feature 的所有提交
+- 成功：root 分支和 feature 分支都已包含所有提交
 - 冲突：需要手动解决
 
-### 6. 输出结果
+### 7. 输出结果
 
 - 成功：报告 rebase 完成，显示 root 分支最近提交
 - 冲突：报告冲突文件列表，提示用户手动解决
