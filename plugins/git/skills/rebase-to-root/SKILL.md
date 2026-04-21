@@ -91,10 +91,10 @@ git -C "$PROJECT_ROOT" rebase "<feature-name>"
 
 ### 5. Forward worktree 分支
 
-rebase 成功后，root 分支已前进，但 worktree 的 feature 分支仍指向旧位置。需要将 worktree forward 到 root 当前分支：
+rebase 成功后，root 分支已前进，但 worktree 的 feature 分支仍指向旧位置。需要将 worktree fast-forward 到 root 当前分支：
 
 ```bash
-git -C "<worktree-path>" rebase "<root-branch>"
+git -C "<worktree-path>" merge --ff-only "<root-branch>"
 ```
 
 这样 feature 分支就与 root 当前分支保持同步。
