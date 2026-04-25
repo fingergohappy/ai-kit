@@ -15,32 +15,32 @@ argument-hint: [review文档路径, 如 docs/spec/xxx_review.md]
 
 ## 执行步骤
 
-1. 获取当前 pane ID:
-   ```bash
-   tmux display-message -p '#{pane_id}'
-   ```
-2. 从 $ARGUMENTS 获取 review 文档路径
-3. 如果没有提供路径，询问用户要修复哪个 review 文档
-4. **更新关联文档状态为 `doing`**：找到 review 文档对应的 feature/change 文档，将其 frontmatter 中的 `status` 改为 `doing`
-5. 生成修复指令消息（末尾附带反馈指令）
-6. 通过 ai-kit:tmux-send skill 发送（由 ai-kit:tmux-send 负责确定目标 pane）
+1. 从 $ARGUMENTS 获取 review 文档路径
+2. 如果没有提供路径，询问用户要修复哪个 review 文档
+3. **更新关联文档状态为 `doing`**：找到 review 文档对应的 feature/change 文档，将其 frontmatter 中的 `status` 改为 `doing`
+4. 通过脚本生成修复指令消息
+5. 通过 ai-kit:tmux-send skill 发送（由 ai-kit:tmux-send 负责确定目标 pane）
 
-## 消息格式
+## 生成消息
 
-固定开头 + review 文档路径：
+**必须且只能**通过 `scripts/generate_message.sh` 生成消息。严禁自己拼接或手写消息内容——无论多简单，都不允许绕过脚本。
 
-```
-使用 ai-kit:spec-check-review skill 查看以下 review 文档，并完成修复：
+需要准备的参数：
+- `review_path`：review 文档路径
+- `tool_name`：当前 AI 工具名称（如 `Claude Code`、`Cursor` 等）
+- `desc`：对当前对话的一句话简要描述（由你生成）
 
-{review 文档路径}
-
----
-
-执行完成后，调用 ai-kit:spec-feedback skill 向 pane {当前pane_id} 反馈结果。
-
-[task from {当前AI工具名称, 如 Claude Code/Codex/OpenCode 等}: {当前对话的简要描述}, pane_id: {当前pane_id}]
+```bash
+MSG_FILE=$(bash scripts/generate_message.sh \
+  --review-path "{review文档路径}" \
+  --tool-name "{tool_name}" \
+  --desc "{简要描述}")
 ```
 
 ## 发送方式
 
-使用 ai-kit:tmux-send skill 发送，由它负责处理目标 pane 的选择。
+通过 ai-kit:tmux-send skill 发送，由它负责处理目标 pane 的选择：
+
+```
+/tmux-send {target_pane_id} {MSG_FILE}
+```

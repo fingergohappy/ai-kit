@@ -37,22 +37,42 @@ context: fork
 
 ## 返回格式
 
-```
-## 审查结果
+**必须且只能**通过 `scripts/generate_review_result.sh` 生成审查结果。严禁自己拼接或手写结果格式——无论多简单，都不允许绕过脚本。这样做是为了保证审查结果格式一致。
 
-- 状态: {通过 / 需要修复}
-- 修复轮次: {当前轮次}
+### 准备工作
 
-### 问题列表
+先将审查发现的问题和建议分别写入临时文件：
 
+```bash
+# 问题列表，每行一条，格式: [级别] 问题描述 → 修复建议
+ISSUES_FILE=$(mktemp /tmp/spec-issues.XXXXXX)
+cat > "$ISSUES_FILE" <<'EOF'
 - [CRITICAL] {问题描述} → {修复建议}
 - [HIGH] {问题描述} → {修复建议}
 - [MEDIUM] {问题描述}（可选修复）
+EOF
 
-### 建议
-
-{如果需要修复，给出修复任务清单，可以用 spec-implement skill 发起下一轮}
+# 建议（可选）
+SUGGESTIONS_FILE=$(mktemp /tmp/spec-suggestions.XXXXXX)
+cat > "$SUGGESTIONS_FILE" <<'EOF'
+{修复任务清单，可以用 spec-implement skill 发起下一轮}
+EOF
 ```
+
+### 生成审查结果
+
+```bash
+RESULT_FILE=$(bash scripts/generate_review_result.sh \
+  --status "{通过|需要修复}" \
+  --round "{当前轮次}" \
+  --issues-file "$ISSUES_FILE" \
+  --suggestions-file "$SUGGESTIONS_FILE")
+
+# 清理临时文件
+rm "$ISSUES_FILE" "$SUGGESTIONS_FILE"
+```
+
+如果审查全部通过，问题列表文件写入"无"即可。
 
 ## 终止条件
 

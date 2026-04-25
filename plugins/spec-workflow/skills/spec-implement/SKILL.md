@@ -27,37 +27,52 @@ context: fork
 
 ## 执行步骤
 
-1. 获取 this_pane_id：
-   ```bash
-   echo $TMUX_PANE
-   ```
-2. 确定 target_pane_id（见工作流程）
-3. 若参数是文件路径，读取文档内容；若文档有 frontmatter，将 `status` 从 `draft` 改为 `doing`
-4. 按下方格式生成消息，通过 tmux-send skill 发送到 target_pane_id
+1. 确定 target_pane_id（见工作流程）
+2. 若参数是文件路径，读取文档内容；若文档有 frontmatter，将 `status` 从 `draft` 改为 `doing`
+3. 按下方说明生成消息，通过 tmux-send skill 发送到 target_pane_id
 
-## 发送格式
+## 生成发送消息
 
-### 文档路径：
+使用 `scripts/generate_message.sh` 生成格式化消息，不要手动拼接模板内容。
+
+**必须且只能**通过 `scripts/generate_message.sh` 生成格式化消息。严禁自己拼接或手写消息内容——无论多简单，都不允许绕过脚本。这样做是为了保证消息格式一致、避免遗漏字段。
+
+需要准备的参数：
+- `tool_name`：当前 AI 工具名称（如 `Claude Code`、`Cursor` 等，从环境或对话上下文判断）
+- `desc`：对任务的一句话简要描述（由你生成）
+
+### 文档路径模式：
+
+```bash
+MSG_FILE=$(bash scripts/generate_message.sh \
+  --mode doc \
+  --doc-path "{文档路径}" \
+  --tool-name "{tool_name}" \
+  --desc "{简要描述}")
+```
+
+### 内联任务模式（将内容写入临时文件，再追加尾部）：
+
+先将内联任务内容写入临时文件，然后追加脚本生成的尾部：
+
+```bash
+# 1. 将内联任务内容写入临时文件
+MSG_FILE=$(mktemp /tmp/spec-inline-task.XXXXXX)
+echo "{内联任务内容}" > "$MSG_FILE"
+
+# 2. 生成尾部并追加
+FOOTER_FILE=$(bash scripts/generate_message.sh \
+  --mode inline \
+  --tool-name "{tool_name}" \
+  --desc "{简要描述}")
+cat "$FOOTER_FILE" >> "$MSG_FILE"
+rm "$FOOTER_FILE"
+```
+
+## 发送消息
+
+通过 tmux-send skill 将生成的消息文件发送到 target_pane_id：
 
 ```
-请按照以下设计文档实现：{文档路径}
-
-完成每个任务后，将文档中对应的"实现状态"从 [todo] 更新为 [done]。
-如果某个任务跳过，更新为 [skip] 并注明原因。
-
----
-
-执行完成后，调用 spec-feedback skill 向 pane {this_pane_id} 反馈结果。
-
-[task from {当前AI工具名称}, pane_id: {this_pane_id}: {简要描述}]
-```
-
-### 内联任务（直接将内容发送，末尾附加）：
-
-```
----
-
-执行完成后，调用 spec-feedback skill 向 pane {this_pane_id} 反馈结果。
-
-[task from {当前AI工具名称}, pane_id: {this_pane_id}: {简要描述}]
+/tmux-send {target_pane_id} {MSG_FILE}
 ```
