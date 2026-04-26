@@ -59,6 +59,14 @@ claude --plugin-dir /path/to/ai-kit
 
 This repository includes Codex plugin manifests for `agentflow`, `tmux`, and `git`.
 
+Quick AI-driven install/update:
+
+Paste this URL into Codex and ask it to follow the runbook:
+
+```
+follow this install https://github.com/fingergohappy/ai-kit/blob/main/docs/codex_plugin_install_update.md
+```
+
 Detailed guide:
 
 - [`docs/codex_plugin_install_update.md`](docs/codex_plugin_install_update.md)

@@ -7,24 +7,24 @@ TARGET_DIR="${HOME}/.codex/agents"
 SKILLS_TARGET_DIR="${HOME}/.agents/skills"
 MAP_CLAUDE_MODELS=1
 FORCE=1
-INSTALL_SKILL_LINKS=1
+INSTALL_SKILL_LINKS=0
 
 usage() {
   cat <<'EOF'
 Usage:
-  bash scripts/install_codex_agents.sh [--target DIR] [--skills-target DIR] [--no-model-map] [--no-force] [--no-skill-links]
+  bash scripts/install_codex_agents.sh [--target DIR] [--skills-target DIR] [--no-model-map] [--no-force] [--link-skills]
 
 Description:
   Convert Claude-style plugin agents in this repository into Codex custom agent TOML
-  files and install them into the target agent directory. By default, also expose
-  plugin skills to Codex by creating symlinks under ~/.agents/skills.
+  files and install them into the target agent directory.
 
 Options:
   --target DIR          Install agents to DIR instead of ~/.codex/agents
-  --skills-target DIR   Install skill symlinks to DIR instead of ~/.agents/skills
+  --skills-target DIR   Install optional skill symlinks to DIR instead of ~/.agents/skills
   --no-model-map        Do not map Claude model aliases like haiku/opus to OpenAI models
   --no-force            Do not overwrite existing TOML files
-  --no-skill-links      Skip installing plugin skill symlinks
+  --link-skills         Also expose plugin skills as user skill symlinks
+  --no-skill-links      Deprecated no-op; skill symlinks are disabled by default
   -h, --help            Show this help
 EOF
 }
@@ -45,6 +45,10 @@ while [[ $# -gt 0 ]]; do
       ;;
     --no-force)
       FORCE=0
+      shift
+      ;;
+    --link-skills)
+      INSTALL_SKILL_LINKS=1
       shift
       ;;
     --no-skill-links)
