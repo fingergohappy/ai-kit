@@ -1,9 +1,8 @@
 ---
 name: review-init
-description: |
-  Analyze project tech stack and generate customized code review skills. Merges with existing review skills if present.
+description: Generate customized code review skills.
 argument-hint: ""
-disable-model-invocation: false
+disable-model-invocation: true
 ---
 
 # review-init
@@ -36,6 +35,7 @@ Based on the analysis results, filter suitable perspectives from the candidates 
 | `architecture` | Always recommended | Module boundaries, dependency direction, layering soundness, directory organization, circular dependencies, responsibility separation |
 
 #### Language/Framework Perspectives
+
 
 | Perspective | Generation Condition | Description |
 |-------------|---------------------|-------------|

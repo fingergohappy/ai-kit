@@ -1,9 +1,9 @@
 ---
 name: tmux-send
 model: haiku
-description: |
-  Send content to a tmux pane and auto-execute. Triggers on "send to pane", "run in tmux", or any phrase targeting a specific pane number.
-argument-hint: "[<pane_id>] [<内容>]"
+description: send content to a tmux pane
+when-to-use: when say send to,让 {number} do
+argument-hint: "[<内容>] | [<pane_id>] "
 disable-model-invocation: false
 ---
 
