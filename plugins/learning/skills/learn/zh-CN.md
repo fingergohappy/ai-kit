@@ -1,8 +1,8 @@
 ---
 name: learn
 description: |
+  用最简单的方式帮助用户理解概念，通过最小示例、简化和代码类比。
   Help the user understand a concept in the simplest way possible using minimal examples, simplification, and code analogies.
-  When user wants to understand something quickly, get a minimal example, or simplify existing content. Triggers on "learn", "explain", "give me an example", "simplify", "analogy", or any question where the goal is understanding rather than implementation.
 when_to_use: |
   当用户说「学」「学习」「解释」「举例」「举个例子」「simplify」「explain」时触发。
   或者用户问了一个概念性问题想快速理解，或者用户想让复杂内容变简单，或者用户想用类比理解某个东西。

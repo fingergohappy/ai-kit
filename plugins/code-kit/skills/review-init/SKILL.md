@@ -4,63 +4,66 @@ description: |
   分析当前项目的技术栈、依赖和代码结构，生成定制化的 code review skills。
   当用户说「生成 review」、「初始化 review」、「review init」、「生成代码审查」时触发。
   如果项目已有 review skills，走合并逻辑：展示已有 + 新建议，让用户决定增删。
+  Analyze the current project's tech stack, dependencies, and code structure to generate customized code review skills.
+  Triggered when the user says "generate review", "initialize review", "review init", or "generate code review".
+  If the project already has review skills, use merge logic: show existing + new suggestions, and let the user decide what to add or remove.
 argument-hint: ""
 ---
 
 # review-init
 
-分析项目，生成定制化的 review skills 到 `.claude/skills/`。
+Analyze the project and generate customized review skills into `.claude/skills/`.
 
-## 执行步骤
+## Execution Steps
 
-### 1. 分析项目
+### 1. Analyze the Project
 
-收集以下信息：
+Collect the following information:
 
-- **语言和框架**：检查 `package.json`、`go.mod`、`Cargo.toml`、`pyproject.toml`、`requirements.txt`、`composer.json`、`Gemfile`、`pom.xml`、`build.gradle` 等
-- **目录结构**：`find . -type f -name '*.ts' -o -name '*.tsx' -o -name '*.py' -o -name '*.go' -o -name '*.rs' -o -name '*.java' -o -name '*.php' -o -name '*.swift' | head -50` 了解主要语言分布
-- **依赖特征**：ORM/数据库、认证库、API 框架、测试框架、前端框架等
-- **已有规则**：检查 `CLAUDE.md`、`.claude/rules/`、`.eslintrc`、`.golangci.yml` 等
-- **已有 review skills**：检查 `.claude/skills/review-*/SKILL.md` 是否已存在
+- **Languages and frameworks**: Check `package.json`, `go.mod`, `Cargo.toml`, `pyproject.toml`, `requirements.txt`, `composer.json`, `Gemfile`, `pom.xml`, `build.gradle`, etc.
+- **Directory structure**: `find . -type f -name '*.ts' -o -name '*.tsx' -o -name '*.py' -o -name '*.go' -o -name '*.rs' -o -name '*.java' -o -name '*.php' -o -name '*.swift' | head -50` to understand the primary language distribution
+- **Dependency characteristics**: ORM/database, authentication libraries, API frameworks, testing frameworks, frontend frameworks, etc.
+- **Existing rules**: Check `CLAUDE.md`, `.claude/rules/`, `.eslintrc`, `.golangci.yml`, etc.
+- **Existing review skills**: Check whether `.claude/skills/review-*/SKILL.md` already exists
 
-### 2. 推荐 review 角度
+### 2. Recommend Review Perspectives
 
-根据分析结果，从以下候选角度中筛选适合当前项目的，每个附带一句话说明为什么推荐：
+Based on the analysis results, filter suitable perspectives from the candidates below for the current project. Include a one-sentence explanation for each recommendation.
 
-#### 通用角度（大多数项目适用）
+#### General Perspectives (Applicable to Most Projects)
 
-| 角度 | 生成条件 | 说明 |
-|------|---------|------|
-| `security` | 始终推荐 | 硬编码密钥、注入、未验证输入、敏感数据泄露 |
-| `error-handling` | 始终推荐 | 静默吞错、缺少边界处理、错误信息质量 |
-| `code-quality` | 始终推荐 | 大函数、深嵌套、命名、重复代码、文件组织 |
-| `architecture` | 始终推荐 | 模块边界、依赖方向、分层合理性、目录组织、循环依赖、职责划分 |
+| Perspective | Generation Condition | Description |
+|-------------|---------------------|-------------|
+| `security` | Always recommended | Hardcoded secrets, injection, unvalidated input, sensitive data leakage |
+| `error-handling` | Always recommended | Silently swallowing errors, missing boundary handling, error message quality |
+| `code-quality` | Always recommended | Large functions, deep nesting, naming, duplicate code, file organization |
+| `architecture` | Always recommended | Module boundaries, dependency direction, layering soundness, directory organization, circular dependencies, responsibility separation |
 
-#### 语言/框架角度
+#### Language/Framework Perspectives
 
-| 角度 | 生成条件 | 说明 |
-|------|---------|------|
-| `type-safety` | TypeScript 项目 | any 滥用、类型断言、缺少类型定义 |
-| `react-patterns` | React 项目 | hooks 规则、组件设计、状态管理、渲染性能 |
-| `vue-patterns` | Vue 项目 | 组合式 API、响应式、组件通信 |
-| `concurrency` | Go/Rust/Java 项目 | goroutine 泄漏、竞态条件、死锁、channel 使用 |
-| `memory-safety` | Rust/C/C++ 项目 | 生命周期、所有权、unsafe 使用 |
-| `python-idioms` | Python 项目 | 类型提示、异常处理、生成器使用 |
+| Perspective | Generation Condition | Description |
+|-------------|---------------------|-------------|
+| `type-safety` | TypeScript projects | `any` overuse, type assertions, missing type definitions |
+| `react-patterns` | React projects | Hooks rules, component design, state management, render performance |
+| `vue-patterns` | Vue projects | Composition API, reactivity, component communication |
+| `concurrency` | Go/Rust/Java projects | Goroutine leaks, race conditions, deadlocks, channel usage |
+| `memory-safety` | Rust/C/C++ projects | Lifetimes, ownership, unsafe usage |
+| `python-idioms` | Python projects | Type hints, exception handling, generator usage |
 
-#### 领域角度
+#### Domain Perspectives
 
-| 角度 | 生成条件 | 说明 |
-|------|---------|------|
-| `api-design` | 检测到 API 路由定义 | 接口一致性、输入验证、响应格式、版本控制 |
-| `database` | 检测到 ORM/SQL 依赖 | N+1 查询、索引、事务、SQL 注入 |
-| `accessibility` | 检测到前端 HTML/JSX | ARIA 属性、键盘导航、颜色对比、语义化 |
-| `performance` | 检测到前端框架或高并发后端 | 包体积、懒加载、缓存、渲染优化 |
-| `test-quality` | 检测到测试文件 | 测试覆盖率、测试隔离、mock 质量、边界用例 |
-| `rules-compliance` | 检测到 CLAUDE.md 或项目规则 | 代码是否符合项目已定义的规则和约定 |
+| Perspective | Generation Condition | Description |
+|-------------|---------------------|-------------|
+| `api-design` | API route definitions detected | Interface consistency, input validation, response format, versioning |
+| `database` | ORM/SQL dependencies detected | N+1 queries, indexing, transactions, SQL injection |
+| `accessibility` | Frontend HTML/JSX detected | ARIA attributes, keyboard navigation, color contrast, semantic markup |
+| `performance` | Frontend framework or high-concurrency backend detected | Bundle size, lazy loading, caching, render optimization |
+| `test-quality` | Test files detected | Test coverage, test isolation, mock quality, edge cases |
+| `rules-compliance` | CLAUDE.md or project rules detected | Whether the code conforms to the project's defined rules and conventions |
 
-### 3. 用户确认
+### 3. User Confirmation
 
-将推荐的角度列出，格式如下：
+List the recommended perspectives in the following format:
 
 ```
 根据项目分析，建议生成以下 review 角度：
@@ -78,13 +81,13 @@ argument-hint: ""
 - 直接确认开始生成
 ```
 
-等待用户确认后再生成。
+Wait for user confirmation before generating.
 
-### 4. 生成 review skills
+### 4. Generate Review Skills
 
-对用户确认的每个角度，生成 `.claude/skills/review-{角度}/SKILL.md`。
+For each confirmed perspective, generate `.claude/skills/review-{perspective}/SKILL.md`.
 
-每个 review skill 的内容结构：
+The content structure of each review skill:
 
 ```markdown
 ---
@@ -122,19 +125,20 @@ argument-hint: "[<文件路径或目录>]"
 状态值：`[todo]` 待修复 | `[doing]` 修复中 | `[done]` 已修复 | `[skip]` 跳过
 ```
 
-生成时根据项目实际情况定制检查项内容。例如：
-- 如果项目用 Express，`api-design` 的检查项应包含 Express 中间件相关内容
-- 如果项目用 Prisma，`database` 的检查项应包含 Prisma 特有的 N+1 模式
-- 如果项目有 CLAUDE.md 规则，`rules-compliance` 的检查项应引用具体规则
+Customize the checklist content based on the project's actual situation during generation. For example:
 
-### 5. 生成汇总 skills
+- If the project uses Express, `api-design` checklists should include Express middleware-related content
+- If the project uses Prisma, `database` checklists should include Prisma-specific N+1 patterns
+- If the project has CLAUDE.md rules, `rules-compliance` checklists should reference specific rules
 
-读取本 SKILL.md 同目录下的模板生成两个汇总 skill：
+### 5. Generate Summary Skills
 
-- `.claude/skills/review-full/SKILL.md` — 基于 `references/review_full_template.md`
-- `.claude/skills/review-diff/SKILL.md` — 基于 `references/review_diff_template.md`
+Read the templates in the same directory as this SKILL.md to generate two summary skills:
 
-生成时将模板中的 `{review_skill_list}` 替换为实际生成的 review skill 名称列表，格式如下：
+- `.claude/skills/review-full/SKILL.md` — based on `references/review_full_template.md`
+- `.claude/skills/review-diff/SKILL.md` — based on `references/review_diff_template.md`
+
+During generation, replace `{review_skill_list}` in the templates with the actual list of generated review skill names, in the following format:
 
 ```markdown
 - `review-security` — 安全审查
@@ -142,19 +146,19 @@ argument-hint: "[<文件路径或目录>]"
 - `review-error-handling` — 错误处理审查
 ```
 
-同时更新 review-full 和 review-diff 的 description，列出包含的审查角度。
+Also update the descriptions of review-full and review-diff to list the included review perspectives.
 
-### 6. 合并逻辑（重复执行时）
+### 6. Merge Logic (When Re-run)
 
-如果 `.claude/skills/` 下已有 `review-*` skills：
+If `review-*` skills already exist under `.claude/skills/`:
 
-1. 列出已有的 review skills
-2. 列出本次新推荐的角度
-3. 标记哪些是新增、哪些已存在
-4. 让用户决定：保留全部 / 删除某些 / 新增某些
-5. 只生成/删除用户确认的部分，不动未提及的已有 skill
+1. List the existing review skills
+2. List the newly recommended perspectives
+3. Mark which are new and which already exist
+4. Let the user decide: keep all / remove some / add some
+5. Only generate/delete the parts the user confirmed; do not touch existing skills that were not mentioned
 
-### 7. 完成提示
+### 7. Completion Message
 
 ```
 已生成 {N} 个 review skills：

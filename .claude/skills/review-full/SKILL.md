@@ -2,82 +2,83 @@
 name: review-full
 description: |
   全量代码审查。启动子代理并行调用所有 review skills 扫描整个项目，汇总结果。
-  当用户说「全量审查」、「review all」、「review full」、「全面检查」时触发。
+  Full project code review. Launches sub-agents in parallel calling all review skills to scan the entire project, then aggregates results.
+  当用户说「全量审查」「review all」「review full」「全面检查」时触发。
   审查角度：shell 脚本质量、架构、skill 规范。
-argument-hint: "[<目录路径>]"
+argument-hint: "[<directory path>]"
 ---
 
 # review-full
 
-全量代码审查，子代理并行调用所有 review skills，扫描整个项目。
+Full code review with sub-agents calling all review skills in parallel to scan the entire project.
 
-## 执行步骤
+## Execution Steps
 
-### 1. 确定审查范围
+### 1. Determine Review Scope
 
-- 如果 `$ARGUMENTS` 指定了目录路径，只扫描该目录
-- 否则扫描整个项目（排除 `node_modules`、`.git`、`vendor`、`dist`、`build`、`__pycache__` 等常见忽略目录）
+- If `$ARGUMENTS` specifies a directory path, only scan that directory
+- Otherwise scan the entire project (excluding common ignored directories like `node_modules`, `.git`, `vendor`, `dist`, `build`, `__pycache__`)
 
-收集项目源代码文件列表：
+Collect project source code file list:
 
 ```bash
 find . -type f \( -name '*.ts' -o -name '*.tsx' -o -name '*.js' -o -name '*.jsx' -o -name '*.py' -o -name '*.go' -o -name '*.rs' -o -name '*.java' -o -name '*.php' -o -name '*.swift' -o -name '*.kt' -o -name '*.rb' -o -name '*.sh' -o -name '*.md' \) \
   ! -path '*/node_modules/*' ! -path '*/.git/*' ! -path '*/vendor/*' ! -path '*/dist/*' ! -path '*/build/*' ! -path '*/__pycache__/*' ! -path '*/.next/*' ! -path '*/target/*'
 ```
 
-### 2. 并行启动子代理
+### 2. Launch Sub-agents in Parallel
 
-对以下 review skills 各启动一个子代理（使用 Agent 工具），将文件列表作为输入：
+Launch one sub-agent for each of the following review skills (using Agent tool), passing the file list as input:
 
-- `review-shell` — shell 脚本质量审查
-- `review-architecture` — 架构审查
-- `review-skill-quality` — skill 规范审查
+- `review-shell` — shell script quality review
+- `review-architecture` — architecture review
+- `review-skill-quality` — skill specification review
 
-每个子代理：
-- 读取对应的 `.claude/skills/review-{角度}/SKILL.md`
-- 按其中定义的审查清单逐项检查
-- 输出发现的问题
+Each sub-agent:
+- Reads the corresponding `.claude/skills/review-{angle}/SKILL.md`
+- Checks items according to the review checklist defined therein
+- Outputs issues found
 
-子代理 prompt 格式：
-
-```
-请读取 .claude/skills/review-{角度}/SKILL.md，按其中的审查清单审查以下文件：
-
-{文件列表}
-
-输出发现的问题，每个问题包含：严重级别、文件路径:行号、问题描述、修复建议。
-```
-
-### 3. 汇总结果
-
-等待所有子代理完成后，汇总审查结果：
-
-1. 按严重级别排序：CRITICAL → HIGH → MEDIUM → LOW
-2. 合并去重（不同角度可能发现同一问题）
-3. 统计各级别问题数量
-
-输出汇总：
+Sub-agent prompt format:
 
 ```
-## 审查汇总
+Read .claude/skills/review-{angle}/SKILL.md and review the following files according to its checklist:
 
-| 级别 | 数量 |
-|------|------|
+{file list}
+
+Output issues found, each including: severity level, file path:line number, issue description, fix suggestion.
+```
+
+### 3. Aggregate Results
+
+After all sub-agents complete, aggregate review results:
+
+1. Sort by severity level: CRITICAL → HIGH → MEDIUM → LOW
+2. Merge and deduplicate (different angles may find the same issue)
+3. Count issues at each level
+
+Output summary:
+
+```
+## Review Summary
+
+| Level | Count |
+|-------|-------|
 | CRITICAL | {n} |
 | HIGH | {n} |
 | MEDIUM | {n} |
 | LOW | {n} |
 
-{按级别排序的问题列表}
+{Issues sorted by level}
 ```
 
-### 4. 询问是否生成报告
+### 4. Ask to Generate Report
 
-汇总输出后询问用户：
+After the summary output, ask the user:
 
 ```
-是否生成审查报告到 docs/review/？
+Generate review report to docs/review/?
 ```
 
-- 用户确认 → 读取报告模板，填入审查结果，输出到 `docs/review/{日期}_full_review.md`
-- 用户拒绝 → 结束
+- User confirms → read report template, fill in review results, output to `docs/review/{date}_full_review.md`
+- User declines → exit

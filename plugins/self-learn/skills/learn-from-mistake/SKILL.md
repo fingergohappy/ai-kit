@@ -6,64 +6,69 @@ description: |
   AI 应在纠正后主动提议：「要不要把这个教训固化下来？」，用户同意后再执行。
   产出物根据错误性质决定：生成新的防护 skill，或向 CLAUDE.md 追加约束规则。
   不触发的场景：用户只是在讨论错误但不针对当前 AI 行为；用户想创建与错误无关的新 skill（应触发 skill-creator）。
-argument-hint: "[<错误描述>]"
+  After the AI is corrected by the user, proactively ask whether to固化 (solidify) the lesson as a guardrail rule.
+  Trigger前提: the AI just made a mistake in the current conversation and was corrected by the user (e.g., "you got this wrong", "that's not right", "incorrect").
+  The AI should proactively suggest after the correction: "Want to solidify this lesson?" and only proceed after the user agrees.
+  The output depends on the nature of the error: generate a new guardrail skill, or append a constraint rule to CLAUDE.md.
+  Do not trigger when: the user is merely discussing errors without targeting the current AI behavior; the user wants to create a new skill unrelated to a mistake (should trigger skill-creator instead).
+argument-hint: "[<error description>]"
 ---
 
 # learn-from-mistake
 
-AI 被纠正后，主动提议将教训固化，经用户同意后生成防护规则。
+After being corrected, proactively propose solidifying the lesson, then generate a guardrail rule upon user approval.
 
-## 工作流程
+## Workflow
 
-1. **识别错误**：当用户纠正 AI 时触发。提取以下信息：
-   - 错误行为：AI 做了什么
-   - 触发条件：在什么情况下发生的
-   - 用户纠正：用户期望的正确行为是什么
-   - 如果用户的纠正不够明确，先确认：「我理解你认为 [X] 是问题所在，正确做法应该是 [Y]，是这样吗？」
+1. **Identify the error**: Triggered when the user corrects the AI. Extract the following:
+   - Error behavior: what the AI did
+   - Trigger condition: under what circumstances it happened
+   - User correction: what the user expects as the correct behavior
+   - If the user's correction is unclear, confirm first: "I understand you think [X] is the problem, and the correct approach should be [Y] — is that right?"
 
-2. **归纳并提议**：将具体错误抽象为通用模式后，展示给用户并征求意见：
-   - 用「当 X 时，AI 倾向于 Y，但正确做法是 Z」的句式归纳
-   - 直接展示归纳结果，让用户基于具体内容决定是否固化
-   - 用户不同意则停止
+2. **Summarize and propose**: Abstract the specific error into a general pattern, present it to the user, and ask for their opinion:
+   - Use the pattern: "When X, the AI tends to Y, but the correct approach is Z"
+   - Show the summary directly so the user can decide whether to solidify based on the concrete content
+   - Stop if the user disagrees
 
-3. **泛化自检**：归纳模式后执行自检，确保粒度合适：
-   - X 描述的是一个可识别的编码/操作场景，不是泛泛的"写代码时"
-   - Z 描述的是一个可执行的检查步骤，不是"小心点"
-   - 自检不通过则调整粒度，宁可偏具体也不要过于抽象
+3. **Generalization self-check**: After summarizing the pattern, run a self-check to ensure appropriate granularity:
+   - X describes an identifiable coding/operational scenario, not something vague like "when writing code"
+   - Z describes an executable check step, not "be more careful"
+   - If the self-check fails, adjust the granularity — err on the side of being too specific rather than too abstract
 
-4. **判断产出形式**：
-   - **需要"错误 vs 正确"的行为/操作/代码对比才能说清楚** → 生成 skill
-   - **一句话就能说清楚的规则** → 更新 CLAUDE.md
-   - 两者都需要时，都做
+4. **Determine output form**:
+   - **Requires an "incorrect vs correct" behavior/operation/code comparison to explain clearly** → generate a skill
+   - **A rule that can be stated in one sentence** → update CLAUDE.md
+   - When both are needed, do both
 
-5. **生成产出**：按对应方式执行
+5. **Generate output**: Execute according to the determined form
 
-6. **质量保证**：如果产出是 skill，在写入文件前调用 `skill-creator:skill-creator` 评估 description 触发覆盖面和内容质量，根据评估结果修改后再写入
+6. **Quality assurance**: If the output is a skill, call `skill-creator:skill-creator` before writing the file to evaluate the description's trigger coverage and content quality, then revise based on the evaluation before writing
 
-## 生成 skill
+## Generate a Skill
 
-放在当前项目根目录的 `.claude/skills/{name}/SKILL.md`（不是用户 home 目录的 `~/.claude/skills/`）。
+Place it in `.claude/skills/{name}/SKILL.md` in the current project root (not the user home directory `~/.claude/skills/`).
 
-生成前先检查 `.claude/skills/` 下是否已有类似 skill，有则更新而非新建。
+Before generating, check whether a similar skill already exists under `.claude/skills/` — update it rather than creating a new one.
 
-### 内容指引
+### Content Guidelines
 
-生成的 skill 应包含以下核心要素（格式不限，根据错误性质灵活组织）：
+The generated skill should include the following core elements (format is flexible; organize based on the nature of the error):
 
-- **触发条件**：什么情况下会犯这个错
-- **错误行为**：AI 通常会做什么（可用代码、操作流程、行为描述等说明）
-- **正确做法**：修正后的做法（同样不限于代码）
-- **检查步骤**：2-4 个可操作的检查动作，AI 能在编码时实际执行
+- **Trigger condition**: under what circumstances this mistake tends to occur
+- **Error behavior**: what the AI typically does (can be illustrated with code, operational procedures, behavioral descriptions, etc.)
+- **Correct approach**: the corrected approach (also not limited to code)
+- **Check steps**: 2–4 actionable check actions that the AI can actually perform during coding
 
-### 要求
+### Requirements
 
-- skill 名称用 kebab-case
-- 错误模式要泛化，不要只针对当前案例
-- 正确做法要具体，让 AI 能直接对照执行
-- 检查步骤要可操作，每个步骤都是一个具体动作
+- Skill name in kebab-case
+- Error patterns should be generalized, not limited to the current case only
+- Correct approach should be specific enough for the AI to follow directly
+- Check steps should be actionable — each step is a concrete action
 
-## 更新 CLAUDE.md
+## Update CLAUDE.md
 
-追加到项目的 `CLAUDE.md` 中。若 CLAUDE.md 不存在，先创建并写入基础结构。
+Append to the project's `CLAUDE.md`. If `CLAUDE.md` does not exist, create it first with a basic structure.
 
-追加时找到语义最相关的章节插入，不要堆在文件末尾。如果没有合适的章节，新建一个。
+When appending, find the semantically most relevant section to insert into — do not pile everything at the end of the file. If no suitable section exists, create a new one.

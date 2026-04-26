@@ -4,6 +4,7 @@ model: haiku
 description: |
   Start, restart, stop, or inspect long-running commands in a shared tmux session.
   Auto-isolates by project path and git branch to prevent conflicts.
+  在共享 tmux 会话中管理长期运行的服务，自动按项目目录和 git 分支隔离窗口。
   Use when user says "启动 dev server", "run in tmux", "后台运行", "长期运行服务".
 argument-hint: <path> [--cmd <command>]
 context: fork
@@ -11,22 +12,22 @@ context: fork
 
 # agent-tmux
 
-在共享 tmux 会话中管理长期运行的服务，自动按项目目录和 git 分支隔离窗口。
+Manage long-running services in a shared tmux session, automatically isolating windows by project directory and git branch.
 
-## 脚本位置
+## Script Location
 
 `plugins/tmux/skills/agent-tmux/scripts/agent-tmux`
 
-## 命令约束
+## Command Constraints
 
-- `--cmd` 后面直接传原始命令,不要对输入的命令做任包装成 `sh -lc ...` 或 `bash -lc ...`
+- Pass the raw command directly after `--cmd`. Do not wrap the input command with `sh -lc ...` or `bash -lc ...`.
 
 ## Workflow
 
-1. 先调用 `status` 检查当前运行状态
-2. 根据状态和用户意图决定操作：
-   - 要启动新服务：已运行 → `restart`，未运行 → `start`
-   - 要停止服务：`stop`
-   - 要查看状态：直接报告 `status` 输出
-3. 报告脚本输出结果给用户
+1. Call `status` first to check the current running state.
+2. Based on the state and user intent, decide the operation:
+   - To start a new service: already running -> `restart`, not running -> `start`
+   - To stop a service: `stop`
+   - To check status: report the `status` output directly
+3. Report the script output to the user.
 

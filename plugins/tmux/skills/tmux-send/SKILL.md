@@ -2,44 +2,46 @@
 name: tmux-send
 model: haiku
 description: |
+  Send content to a specified tmux pane and auto-execute. This is the foundational skill for cross-pane communication—use it whenever you need to "throw" content to another pane.
   将内容发送到指定的 tmux pane 并自动执行。这是跨 pane 通信的基础 skill——任何需要把内容"丢给"另一个 pane 的场景都应该使用它。
+  When the user says phrases that only specify a numeric target (e.g. "发给 7", "发到 %3", "给那边发一下", "send to 7"), content is extracted from conversation context automatically without follow-up questions.
   当用户说「发给 7」「发到 %3」「给那边发一下」这类只指定了数字目标的短语时，内容从对话上下文中自动提取，无需追问。
-  也包括：「发送到 tmux」「在那个面板运行」「send to pane」「run in tmux」「paste to terminal」，
-  以及任何表达"把内容/命令/代码发到某个 pane"意图的话，都应触发此 skill。
+  Also triggers on: "发送到 tmux", "在那个面板运行", "send to pane", "run in tmux", "paste to terminal", or any phrase expressing intent to send content/commands/code to a pane.
+  也包括：「发送到 tmux」「在那个面板运行」「send to pane」「run in tmux」「paste to terminal」，以及任何表达"把内容/命令/代码发到某个 pane"意图的话。
 argument-hint: "[<pane_id>] [<内容>]"
 ---
 
 # tmux-send
 
-将内容发送到指定的 tmux pane，并自动按下 Enter。
+Send content to a specified tmux pane and automatically press Enter.
 
-## 工作流程
+## Workflow
 
-优先检查 `$ARGUMENTS`，否则从自然语言中解析：
+Check `$ARGUMENTS` first; otherwise parse from natural language:
 
-1. `$ARGUMENTS` 同时包含 pane_id 和内容（如 `%7 ls` 或 `7 ls`）→ 直接发送
-2. `$ARGUMENTS` 只有 pane_id（无后续内容）→ 询问用户要发送的内容
-3. `$ARGUMENTS` 为空 → 从对话上下文中提取 pane_id 和内容；用户可能说「把刚才那段代码发到 7」、「将你修改的内容发送到 %3」等，此时内容来自对话中已有的代码或文本
-4. pane_id 仍未知 → 询问用户（纯文本，不显示选项列表）
+1. `$ARGUMENTS` contains both pane_id and content (e.g. `%7 ls` or `7 ls`) → send directly
+2. `$ARGUMENTS` has only pane_id (no trailing content) → ask the user what to send
+3. `$ARGUMENTS` is empty → extract pane_id and content from conversation context; the user may say things like "send that code snippet to 7" or "send what you just modified to %3", where the content comes from existing code or text in the conversation
+4. pane_id is still unknown → ask the user (plain text, do not display a list of options)
 
-## 脚本路径
+## Script Paths
 
-所有 `scripts/` 路径相对于**本 SKILL.md 文件所在目录**。执行前必须先解析为绝对路径：
+All `scripts/` paths are relative to **the directory containing this SKILL.md file**. Resolve them to absolute paths before execution:
 
 ```bash
-SKILL_DIR="$(dirname "$(realpath "${BASH_SOURCE[0]}")")"  # 或直接使用本文件所在目录的绝对路径
+SKILL_DIR="$(dirname "$(realpath "${BASH_SOURCE[0]}")")"  # or use the absolute path of this file's directory directly
 ```
 
-后续命令中用 `"$SKILL_DIR/scripts/xxx.sh"` 替代裸 `scripts/xxx.sh`。
+In subsequent commands, replace bare `scripts/xxx.sh` with `"$SKILL_DIR/scripts/xxx.sh"`.
 
-## 发送内容
+## Sending Content
 
-**必须且只能**通过脚本发送内容。严禁直接调用 `tmux send-keys` 或任何其他 tmux 命令——无论内容多简单，都不允许绕过脚本。这样做是为了保证行为一致、避免转义问题，以及便于统一维护。
+Content **must** be sent exclusively through the script. Directly calling `tmux send-keys` or any other tmux command is strictly forbidden — no matter how simple the content, bypassing the script is not allowed. This ensures consistent behavior, avoids escaping issues, and simplifies maintenance.
 
 ```bash
-# 方式 1：直接传内容
-bash "$SKILL_DIR/scripts/tmux_send.sh" "<pane_id>" "<内容>"
+# Method 1: pass content directly
+bash "$SKILL_DIR/scripts/tmux_send.sh" "<pane_id>" "<content>"
 
-# 方式 2：传文件路径（适合长内容）
+# Method 2: pass a file path (suitable for long content)
 bash "$SKILL_DIR/scripts/tmux_send.sh" "<pane_id>" "/tmp/message.txt"
 ```

@@ -1,8 +1,8 @@
 ---
 name: url-to-skill
 description: |
-  从 URL 自动生成 Claude Code skill 文件。用户提供一个链接，
-  自动抓取内容并生成 SKILL.md 保存到 .claude/skills/ 目录。
+  从 URL 自动生成 Claude Code skill 文件。用户提供一个链接，自动抓取内容并生成 SKILL.md 保存到 .claude/skills/ 目录。
+  Auto-generate Claude Code skill files from a URL. Fetches web content and generates a structured SKILL.md saved to .claude/skills/ directory.
   当用户说"转成 skill"、"从链接生成 skill"、"把这个变成 skill"时触发。
 model: haiku
 context: fork
@@ -11,92 +11,92 @@ argument-hint: <URL>
 
 # URL to Skill
 
-从用户提供的 URL 抓取内容，自动生成结构化的 skill 文件。
+Fetch content from a user-provided URL and auto-generate a structured skill file.
 
-**输入**: `$ARGUMENTS`（URL）
+**Input**: `$ARGUMENTS` (URL)
 
 ---
 
-## 执行步骤
+## Execution Steps
 
-### 1. 抓取内容
+### 1. Fetch Content
 
-使用 `mcp__web_reader__webReader` 工具抓取 URL 内容：
+Use the `mcp__web_reader__webReader` tool to fetch URL content:
 
 - URL: `$ARGUMENTS`
-- 格式: markdown
-- 保留图片摘要: 开启
+- Format: markdown
+- Include image summary: enabled
 
-如果抓取失败，报告错误并停止。
+If fetch fails, report error and stop.
 
-### 2. 分析内容
+### 2. Analyze Content
 
-分析抓取到的内容，提取以下信息：
+Analyze the fetched content and extract the following:
 
-- **主题**: 这篇内容讲什么？
-- **适用场景**: 什么情况下应该使用这个 skill？
-- **触发词**: 用户说什么话时应该触发？
-- **核心知识**: 关键的规则、模式、步骤
-- **代码示例**: 如果有代码，提取关键示例
+- **Topic**: What is this content about?
+- **Use cases**: When should this skill be used?
+- **Trigger phrases**: What should the user say to trigger it?
+- **Core knowledge**: Key rules, patterns, steps
+- **Code examples**: If there's code, extract key examples
 
-### 3. 生成 skill 文件
+### 3. Generate Skill File
 
-根据分析结果，按以下模板生成 SKILL.md：
+Based on the analysis, generate SKILL.md using this template:
 
 ```markdown
 ---
-name: <从内容提取的简短英文名，kebab-case>
+name: <short English name extracted from content, kebab-case>
 description: |
-  <1-2 句中文描述这个 skill 做什么>
-  触发词：<3-5 个触发短语，用顿号分隔>
-model: <根据复杂度选择：简单工具用 haiku，需要推理用 sonnet，深度分析用 opus>
+  <1-2 Chinese sentences describing what this skill does>
+  Trigger phrases: <3-5 trigger phrases separated by commas>
+model: <choose based on complexity: simple tools use haiku, reasoning needed use sonnet, deep analysis use opus>
 context: subagent
 ---
 
-# <Skill 名称>
+# <Skill Name>
 
-<从内容提取的核心说明>
+<Core instructions extracted from content>
 
-## <按内容结构组织的各个章节>
+## <Sections organized by content structure>
 
-<保留原文中的关键规则和模式>
+<Preserve key rules and patterns from original>
 
-<保留有价值的代码示例>
+<Preserve valuable code examples>
 ```
 
-### 4. 确定模型
+### 4. Determine Model
 
-根据内容复杂度自动选择模型：
+Auto-select model based on content complexity:
 
-| 内容类型 | 模型 |
-|---------|------|
-| 简单工具操作、格式化、模板 | haiku |
-| 编码模式、最佳实践、架构指南 | sonnet |
-| 深度分析、安全审查、复杂推理 | opus |
+| Content Type | Model |
+|-------------|-------|
+| Simple tool operations, formatting, templates | haiku |
+| Coding patterns, best practices, architecture guides | sonnet |
+| Deep analysis, security review, complex reasoning | opus |
 
-### 5. 保存文件
+### 5. Save File
 
-1. 从内容主题生成英文目录名（kebab-case）
-2. 创建目录: `.claude/skills/<skill-name>/`
-3. 写入文件: `.claude/skills/<skill-name>/SKILL.md`
-4. 报告文件路径
+1. Generate English directory name from content topic (kebab-case)
+2. Create directory: `.claude/skills/<skill-name>/`
+3. Write file: `.claude/skills/<skill-name>/SKILL.md`
+4. Report file path
 
-### 6. 输出结果
+### 6. Output Result
 
-报告：
+Report:
 
-- 生成的 skill 名称
-- 文件路径
-- 选择的模型及原因
-- 内容摘要（一句话）
+- Generated skill name
+- File path
+- Selected model and reason
+- Content summary (one sentence)
 
 ---
 
-## 生成规则
+## Generation Rules
 
-- frontmatter 中的 description 用中文
-- 正文内容保留原文语言（英文内容保持英文，中文内容保持中文）
-- 代码示例保留原文
-- 不要照搬全文，提取核心可操作的内容
-- 确保生成的 skill 是可执行的指令，不是知识科普
-- 如果原内容太长，按重要度裁剪，保留最可操作的部分
+- Use Chinese for frontmatter description
+- Keep body content in the original language (English content stays English, Chinese content stays Chinese)
+- Keep code examples in original language
+- Don't copy the entire text; extract core actionable content
+- Ensure the generated skill contains executable instructions, not knowledge exposition
+- If the original content is too long, trim by importance, keeping the most actionable parts

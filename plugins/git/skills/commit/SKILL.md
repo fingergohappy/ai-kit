@@ -2,7 +2,9 @@
 name: commit
 description: |
   创建原子 git commit，包含验证、拆分建议和 conventional commit message。
+  Create atomic git commits with validation, split suggestions, and conventional commit messages.
   当用户说"提交"、"commit"、"commit一下"时触发。
+  Triggers when the user says "提交", "commit", or "commit一下".
 model: haiku
 context: fork
 argument-hint: [--no-verify]
@@ -10,105 +12,105 @@ argument-hint: [--no-verify]
 
 # Commit
 
-从当前工作区创建一个干净、可审查的 git commit。
+Create a clean, reviewable git commit from the current working tree.
 
-**输入**: `$ARGUMENTS`
-
----
-
-## 阶段 1 — 验证
-
-如果 `$ARGUMENTS` 包含 `--no-verify`，跳过此阶段。
-
-否则：
-
-1. 从仓库根目录检测项目工具链。
-2. 运行项目中实际存在的 test/lint/build 命令。
-3. 失败时停止并报告，不继续提交。
-
-仅运行项目中实际存在的命令。
+**Input**: `$ARGUMENTS`
 
 ---
 
-## 阶段 2 — 暂存
+## Phase 1 — Validation
 
-检查当前状态：
+If `$ARGUMENTS` contains `--no-verify`, skip this phase.
+
+Otherwise:
+
+1. Detect the project toolchain from the repository root.
+2. Run the test/lint/build commands that actually exist in the project.
+3. On failure, stop and report — do not proceed with the commit.
+
+Only run commands that actually exist in the project.
+
+---
+
+## Phase 2 — Staging
+
+Check the current state:
 
 ```bash
 git status --short
 git diff --cached --stat
 ```
 
-暂存规则：
+Staging rules:
 
-1. 如果文件已暂存，使用已暂存的变更作为提交候选。
-2. 如果没有暂存的文件，执行：
+1. If files are already staged, use the staged changes as the commit candidate.
+2. If no files are staged, run:
 
 ```bash
 git add -A
 ```
 
-3. 再次检查暂存的 diff：
+3. Check the staged diff again:
 
 ```bash
 git diff --cached --stat
 git diff --cached
 ```
 
-如果仍然没有暂存的变更，停止：`没有可提交的内容。`
+If there are still no staged changes, stop: `Nothing to commit.`
 
 ---
 
-## 阶段 3 — 分析
+## Phase 3 — Analysis
 
-审查暂存的 diff，判断它是一个逻辑变更还是多个关注点的混合。
+Review the staged diff and determine whether it is a single logical change or a mix of multiple concerns.
 
-建议拆分的信号：
+Signals that suggest splitting:
 
-- 不同区域中不相关的功能或修复
-- 源码变更混入了大范围的格式化改动
-- 重构混入了行为变更
-- 纯文档变更与代码变更无关
-- 大量生成的文件更新混入手写代码
+- Unrelated features or fixes in different areas
+- Source code changes mixed with large-scale formatting changes
+- Refactoring mixed with behavioral changes
+- Pure documentation changes unrelated to code changes
+- Large generated file updates mixed with hand-written code
 
-如果暂存的 diff 包含多个逻辑变更：
+If the staged diff contains multiple logical changes:
 
-1. **不要**立即提交。
-2. 自动按逻辑拆分为多个暂存分组。
-3. 依次为每个分组生成提交消息并单独提交。
+1. **Do not** commit immediately.
+2. Automatically split into multiple staging groups by logical concern.
+3. Generate a commit message for each group and commit them individually.
 
-如果暂存的 diff 是一个内聚的变更，直接继续。
+If the staged diff is a cohesive change, proceed directly.
 
 ---
 
-## 阶段 4 — 提交消息
+## Phase 4 — Commit Message
 
-生成 conventional commit 消息：
+Generate a conventional commit message:
 
 ```text
 <type>: <description>
 ```
 
-允许的类型：
+Allowed types:
 
-- `✨ feat` — 新功能
-- `🐛 fix` — bug 修复
-- `📝 docs` — 仅文档
-- `♻️ refactor` — 不改变行为的结构调整
-- `✅ test` — 仅测试
-- `🔧 chore` — 工具、配置、依赖、维护
-- `⚡ perf` — 性能优化
-- `👷 ci` — CI/CD 变更
+- `✨ feat` — new feature
+- `🐛 fix` — bug fix
+- `📝 docs` — documentation only
+- `♻️ refactor` — structural changes with no behavior change
+- `✅ test` — tests only
+- `🔧 chore` — tooling, configuration, dependencies, maintenance
+- `⚡ perf` — performance optimization
+- `👷 ci` — CI/CD changes
 
-消息规则：
+Message rules:
 
-- 祈使语气
-- 小写描述
-- 不加句号
-- 控制在 72 字符以内
-- 描述改了什么，而不是实现步骤
+- Imperative mood
+- Lowercase description
+- No trailing period
+- Keep within 72 characters
+- Describe what changed, not implementation steps
 
-示例：
+Examples:
 
 - `✨ feat: add codex commit workflow prompt`
 - `🐛 fix: handle empty staged diff before commit`
@@ -116,29 +118,29 @@ git diff --cached
 
 ---
 
-## 阶段 5 — 提交
+## Phase 5 — Commit
 
-先展示提议的消息和提交范围摘要。
+First, show the proposed message and a summary of the commit scope.
 
-然后提交：
+Then commit:
 
 ```bash
 git commit -m "<type>: <description>"
 ```
 
-如果 hooks 或验证在此阶段失败，清晰报告失败原因，不要修改无关文件。
+If hooks or validation fail at this stage, report the failure clearly — do not modify unrelated files.
 
 ---
 
-## 阶段 6 — 输出
+## Phase 6 — Output
 
-报告：
+Report:
 
 - Commit hash
-- 最终提交消息
-- 变更文件数量
-- 验证是否运行或跳过
+- Final commit message
+- Number of changed files
+- Whether validation was run or skipped
 
-建议的后续步骤：
+Suggested next step:
 
 - `git push`

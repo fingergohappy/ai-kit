@@ -7,62 +7,67 @@ description: |
   当收到带有 [task from ...] 或 [fix from ...] 标签的消息时，
   应在执行前先触发此 skill。
   当用户说「评估下」、「看看合不合理」、「evaluate」时也应触发。
-argument-hint: "[<待评估的内容>]"
+  Entry gate for the receiving end. Evaluates incoming content (tasks, fix
+  instructions, etc.) for reasonableness before execution. Only executes if
+  the evaluation passes; skips or rejects otherwise. Should be triggered
+  before execution when a message contains [task from ...] or [fix from ...]
+  tags. Also triggered when the user says "evaluate".
+argument-hint: "[<content to evaluate>]"
 context: fork
 ---
 
 # gate-evaluate
 
-接收端的入口守卫。收到发起端发来的内容后，先评估合理性，再决定是否执行。
+Entry gate for the receiving end. After receiving content from the originating end, evaluate its reasonableness first, then decide whether to execute.
 
-**核心原则：agent 不可靠，发起端的指令本身也可能有误，不要盲目执行。**
+**Core principle: agents are unreliable, and instructions from the originating end may themselves be wrong. Do not execute blindly.**
 
-## 工作流程
+## Workflow
 
-1. 从对话上下文或 `$ARGUMENTS` 获取待评估的内容
-2. 判断内容类型（首次任务 / 修复指令）
-3. 按对应维度逐条评估
-4. 输出评估结论，交给主 agent 决定下一步
+1. Obtain the content to evaluate from the conversation context or `$ARGUMENTS`
+2. Determine the content type (initial task / fix instruction)
+3. Evaluate item by item against the corresponding dimensions
+4. Output the evaluation conclusion and let the main agent decide the next step
 
-## 评估维度
+## Evaluation Dimensions
 
-### 收到首次任务时（消息含 `[task from ...]`）
+### When receiving an initial task (message contains `[task from ...]`)
 
-逐条检查任务内容：
+Check the task content item by item:
 
-| 维度 | 检查内容 |
-|------|---------|
-| 清晰度 | 任务描述是否明确、无歧义，能否直接动手 |
-| 一致性 | 要求是否与现有代码状态矛盾 |
-| 范围 | 是否要求修改不该改的东西，范围是否合理 |
-| 可行性 | 依赖是否满足，技术上能否实现 |
+| Dimension | What to check |
+|-----------|--------------|
+| Clarity | Is the task description clear, unambiguous, and ready for execution |
+| Consistency | Do the requirements conflict with the current codebase state |
+| Scope | Is it asking to modify things it should not modify; is the scope reasonable |
+| Feasibility | Are dependencies met; is it technically achievable |
 
-### 收到修复指令时（消息含 `[fix from ...]`）
+### When receiving a fix instruction (message contains `[fix from ...]`)
 
-逐条验证每个问题：
+Verify each issue item by item:
 
-| 维度 | 检查内容 |
-|------|---------|
-| 真实性 | 读取问题指向的代码文件和行号，确认问题是否真实存在 |
-| 准确性 | 问题描述（期望 vs 实际）是否正确 |
-| 合理性 | 修复建议是否合理，是否有更好的方案 |
-| 误报 | 是否存在误报（问题不存在或描述不准确） |
-| 收敛性 | 是否在重复要求已经正确的东西（多轮修复场景） |
+| Dimension | What to check |
+|-----------|--------------|
+| Authenticity | Read the code file and line numbers referenced by the issue to confirm whether the problem actually exists |
+| Accuracy | Is the problem description (expected vs actual) correct |
+| Reasonableness | Is the fix suggestion reasonable; is there a better approach |
+| False positive | Is this a false positive (the problem does not exist or the description is inaccurate) |
+| Convergence | Is it repeatedly demanding something that is already correct (multi-round fix scenarios) |
 
-## 评估要求
+## Evaluation Requirements
 
-**以审视的眼光评估发起端的指令，不因对方是"发起端"就默认其正确。**
+**Evaluate instructions from the originating end with a critical eye. Do not assume correctness just because it comes from the "originating end."**
 
-- 逐条评估，不允许笼统地说"全部合理"
-- 对每条任务/问题标注评估结果：
-  - `[合理]` — 描述准确，可以执行
-  - `[不合理]` — 描述不准确或要求不合理，注明原因
-  - `[需澄清]` — 描述模糊，无法判断，需要发起端补充信息
-- 如果是修复指令，必须实际读取代码验证，不能只看描述就下结论
+- Evaluate item by item; do not make blanket statements like "all reasonable"
+- For each task/issue, annotate the evaluation result:
+  - `[合理]` — description is accurate, can be executed
+  - `[不合理]` — description is inaccurate or requirement is unreasonable, note the reason
+  - `[需澄清]` — description is vague, cannot be judged, originating end needs to provide more information
+- For fix instructions, you must actually read the code to verify; do not conclude based on description alone
 
-## 输出
+## Output
 
-评估完成后输出结论，格式：
+After evaluation is complete, output the conclusion in the following format:
 
 ```
 ## 评估结论
@@ -83,12 +88,12 @@ context: fork
 {全部执行 / 跳过不合理项执行其余 / 拒绝执行并反馈原因}
 ```
 
-## 评估后的行为
+## Post-Evaluation Behavior
 
-主 agent 根据评估结论决定：
+The main agent decides based on the evaluation conclusion:
 
-| 总体判断 | 行为 |
-|---------|------|
-| 全部合理 | 正常执行全部任务 |
-| 部分不合理 | 跳过不合理项，执行其余部分，在 report skill 中说明跳过原因 |
-| 整体不合理 | 不执行，直接调用 report skill 向发起端汇报拒绝原因 |
+| Overall verdict | Action |
+|----------------|--------|
+| All reasonable | Execute all tasks normally |
+| Partially unreasonable | Skip unreasonable items, execute the rest, explain skip reasons in the report skill |
+| Entirely unreasonable | Do not execute; directly invoke the report skill to send rejection reasons back to the originating end |

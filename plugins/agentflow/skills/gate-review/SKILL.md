@@ -6,75 +6,79 @@ description: |
   收到带有 [report from ...] 标签的消息时触发。
   当用户说「审查下」、「review」、「看看做得怎么样」、「检查结果」时触发。
   也可用于本地代码自检：代码写完后对照设计文档审查。
-argument-hint: "[<汇报内容或设计文档路径>]"
+  Exit gate for the dispatching side. Reviews whether the receiving side's deliverables meet the standard, checking implementation against design documents.
+  Triggered when a message with a [report from ...] tag is received.
+  Triggered when the user says "审查下", "review", "看看做得怎么样", or "检查结果".
+  Also usable for local code self-review: review code against design documents after implementation.
+argument-hint: "[<report content or design document path>]"
 context: fork
 ---
 
 # gate-review
 
-发起端的出口守卫。审查工作成果是否达标，决定通过还是要求修复。
+Exit gate for the dispatching side. Reviews whether deliverables meet the standard, and decides whether to pass or require fixes.
 
-**核心原则：以审视的眼光评估另一个 agent 的工作成果。agent 并不可靠，汇报内容仅作参考。从实现完整性、代码逻辑、代码风格多个方向进行审查，而非仅检查报错和单元测试。**
+**Core principle: Evaluate another agent's deliverables with a critical eye. Agents are not reliable; their reports are for reference only. Review from multiple angles — implementation completeness, code logic, and code style — rather than only checking for errors and unit tests.**
 
-## 工作流程
+## Workflow
 
-1. 从对话上下文或 `$ARGUMENTS` 获取待审查的内容
-2. 找到原始任务/设计文档（用于对照）
-3. 从标签中提取 `loop` 字段（`[report from ..., loop: true/false]`）
-   - 如果标签中没有 loop 字段，默认为 `false`
-4. 逐条审查
-5. 输出审查结论
-6. 根据结论和 loop 字段决定下一步：
-   - `loop: true` + 需修复 → 自动调用 `/dispatch` 发送修复指令（redo）
-   - `loop: false` + 需修复 → 输出结论就结束，不自动发起修复
-   - 通过 → 标记完成（无论 loop 值）
+1. Obtain the content to review from conversation context or `$ARGUMENTS`
+2. Locate the original task/design document (to compare against)
+3. Extract the `loop` field from the tag (`[report from ..., loop: true/false]`)
+   - If no loop field is present in the tag, default to `false`
+4. Review item by item
+5. Output the review conclusion
+6. Decide the next step based on the conclusion and the loop field:
+   - `loop: true` + fixes needed → automatically call `/dispatch` to send fix instructions (redo)
+   - `loop: false` + fixes needed → output the conclusion and stop, do not automatically initiate fixes
+   - Passed → mark as complete (regardless of loop value)
 
-## 触发场景
+## Trigger Scenarios
 
-### 场景 A：跨 agent 审查（收到 report）
+### Scenario A: Cross-Agent Review (received report)
 
-收到接收端通过 report skill 汇报的执行结果后，审查工作成果。
+After receiving execution results reported by the receiving side via the report skill, review the deliverables.
 
-从汇报消息中提取：
-- 「原始任务」部分找回原始设计
+Extract from the report message:
+- The "original task" section to recover the original design
 
-### 场景 B：本地自检
+### Scenario B: Local Self-Review
 
-代码实现完成后、提交前，对照设计文档审查自己的代码。
+After code implementation is complete and before committing, review your own code against the design document.
 
-从 `$ARGUMENTS` 或对话上下文获取设计文档路径。
+Obtain the design document path from `$ARGUMENTS` or conversation context.
 
-## 审查维度
+## Review Dimensions
 
-| 维度 | 检查内容 |
-|------|---------|
-| 实现完整性 | 逐条对照原始设计，每项任务是否都已实现 |
-| 代码逻辑 | 逻辑错误、边界条件、bug、安全隐患 |
-| 代码风格 | 命名规范、代码组织、接口设计 |
-| 评估反馈 | 如果接收端跳过或拒绝了部分任务，判断其理由是否成立 |
+| Dimension | What to Check |
+|-----------|--------------|
+| Implementation completeness | Compare item by item against the original design; verify every task is implemented |
+| Code logic | Logic errors, boundary conditions, bugs, security vulnerabilities |
+| Code style | Naming conventions, code organization, interface design |
+| Evaluate feedback | If the receiving side skipped or rejected tasks, judge whether their reasoning is valid |
 
-## 审查要求
+## Review Requirements
 
-- 逐条对照原始设计，不允许遗漏
-- 验证输入/输出/边界条件
-- 检查错误处理、安全隐患、性能问题
-- 检查命名规范、代码风格、接口契约
-- 发现任何偏差都必须标记
-- 如果接收端通过 gate-evaluate 跳过了某些任务，审查其跳过理由是否成立
+- Compare item by item against the original design; no omissions allowed
+- Verify inputs, outputs, and boundary conditions
+- Check error handling, security vulnerabilities, and performance issues
+- Check naming conventions, code style, and interface contracts
+- Any deviation must be flagged
+- If the receiving side skipped certain tasks via gate-evaluate, review whether the skip reasoning is valid
 
-## 问题分类
+## Issue Classification
 
-- `[偏离]` — 设计文档定义的内容与代码实现不一致
-- `[逻辑]` — 代码逻辑错误或缺陷
-- `[缺陷]` — 代码质量问题：安全、性能、可维护性
+- `[偏离]` — Content defined in the design document is inconsistent with the code implementation
+- `[逻辑]` — Code logic errors or flaws
+- `[缺陷]` — Code quality issues: security, performance, maintainability
 
-严重级别：`[CRITICAL]` `[HIGH]` `[MEDIUM]` `[LOW]`
+Severity levels: `[CRITICAL]` `[HIGH]` `[MEDIUM]` `[LOW]`
 
-CRITICAL 意味着必须修复。
+CRITICAL means it must be fixed.
 
-## 输出
+## Output
 
-审查完成后输出结论，格式：
+After the review is complete, output the conclusion in this format:
 
 ```
 ## 审查结论
@@ -101,33 +105,33 @@ CRITICAL 意味着必须修复。
 {通过：标记完成 / 需修复：列出修复任务清单}
 ```
 
-## 审查后的行为
+## Behavior After Review
 
-行为取决于审查结论和 loop 标签：
+Behavior depends on the review conclusion and the loop tag:
 
-### loop: true（循环模式）
+### loop: true (loop mode)
 
-| 结论 | 行为 |
-|------|------|
-| 通过 | 标记完成，文档 status → done |
-| 需修复 | 自动调用 `/dispatch` 将问题列表和修复建议发回接收端（redo） |
-| 接收端拒绝有理 | 接受拒绝，调整任务或标记完成 |
-| 接收端拒绝无理 | 自动调用 `/dispatch` 重新发送，附上反驳说明 |
+| Conclusion | Behavior |
+|------------|----------|
+| Passed | Mark as complete, document status → done |
+| Fixes needed | Automatically call `/dispatch` to send the issue list and fix suggestions back to the receiving side (redo) |
+| Receiving side's rejection is justified | Accept the rejection, adjust the task or mark as complete |
+| Receiving side's rejection is unjustified | Automatically call `/dispatch` to resend, with rebuttal explanation |
 
-### loop: false（非循环模式）
+### loop: false (non-loop mode)
 
-| 结论 | 行为 |
-|------|------|
-| 通过 | 标记完成，文档 status → done |
-| 需修复 | 输出问题列表和修复建议，**不自动发起修复**，由用户决定下一步 |
-| 接收端拒绝有理 | 接受拒绝，告知用户 |
-| 接收端拒绝无理 | 告知用户，由用户决定是否重新派发 |
+| Conclusion | Behavior |
+|------------|----------|
+| Passed | Mark as complete, document status → done |
+| Fixes needed | Output the issue list and fix suggestions, **do not automatically initiate fixes**; let the user decide the next step |
+| Receiving side's rejection is justified | Accept the rejection, inform the user |
+| Receiving side's rejection is unjustified | Inform the user, let the user decide whether to redispatch |
 
-## 终止条件
+## Termination Conditions
 
-以下任一条件满足时停止循环：
+Stop the loop when any of the following conditions is met:
 
-- 审查全部通过（无 CRITICAL/HIGH）
-- 仅剩 MEDIUM/LOW 问题
-- 累计修复轮次达到 3 轮
-- 用户手动中断
+- Review passes completely (no CRITICAL/HIGH issues)
+- Only MEDIUM/LOW issues remain
+- Cumulative fix rounds reach 3
+- User manually interrupts

@@ -1,158 +1,158 @@
 ---
 name: fix-review
 description: |
-  修复代码审查报告中的问题，并自动更新报告状态。当用户说「fix review」、「修这个问题」、「处理这条审查意见」、「修复审查」时触发。
-  支持通过报告路径+行号定位问题，也支持通过一句话描述搜索匹配问题。
-  修复前先评估报告中建议的合理性，再制定修复方案。修复完成后自动将报告中的状态从 [todo] 更新为 [done] 并追加修复说明。
-argument-hint: "<报告路径:行号 | 问题描述>"
+  Fix issues found in code review reports and automatically update the report status. Triggered when the user says "fix review", "修这个问题", "处理这条审查意见", "修复审查".
+  Supports locating issues by report path + line number, or by searching with a natural language description.
+  Before fixing, evaluate whether the report's suggestion is reasonable, then formulate a fix plan. After the fix is applied, automatically update the report status from [todo] to [done] and append a fix description.
+argument-hint: "<report-path:line-number | issue-description>"
 ---
 
 # fix-review
 
-修复代码审查报告中的问题，同步更新报告状态。
+Fix issues from code review reports and keep the report status in sync.
 
-## 参数解析
+## Argument Parsing
 
-`$ARGUMENTS` 支持两种输入形式：
+`$ARGUMENTS` supports two input formats:
 
-| 形式 | 示例 | 解析方式 |
-|------|------|---------|
-| 报告路径+行号 | `docs/review/2026-04-26_full_review.md:69` | 读取指定行附近内容，定位 `### #N` 问题块 |
-| 一句话描述 | `修复 tmux_send.sh 中变量未加引号的问题` | 在 `docs/review/` 下搜索关键词匹配的问题 |
+| Format | Example | Parsing |
+|--------|---------|---------|
+| Report path + line number | `docs/review/2026-04-26_full_review.md:69` | Read content around the specified line and locate the `### #N` issue block |
+| Natural language description | `修复 tmux_send.sh 中变量未加引号的问题` | Search for keyword-matched issues under `docs/review/` |
 
-## 执行步骤
+## Execution Steps
 
-### 1. 解析参数
+### 1. Parse Arguments
 
-判断 `$ARGUMENTS` 的类型：
+Determine the type of `$ARGUMENTS`:
 
-- 匹配 `^.+\.md:\d+$` → 路径+行号模式
-- 其他 → 描述文字模式
+- Matches `^.+\.md:\d+$` → path + line number mode
+- Otherwise → description text mode
 
-### 2. 定位问题
+### 2. Locate Issue
 
-#### 路径+行号模式
+#### Path + Line Number Mode
 
-1. 读取指定报告文件，定位到指定行
-2. 向上搜索找到 `### #N` 开头的问题块起始行
-3. 向下读取到下一个 `### #` 或空行前，提取完整问题块
+1. Read the specified report file and navigate to the specified line
+2. Search upward to find the `### #N` heading that starts the issue block
+3. Read downward until the next `### #` or blank line to extract the complete issue block
 
-#### 描述文字模式
+#### Description Text Mode
 
-1. 扫描 `docs/review/` 下所有 `*.md` 报告文件
-2. 提取所有状态为 `[todo]` 或 `[doing]` 的问题块
-3. 从描述中提取关键词（文件名、问题特征等）
-4. 匹配问题的标题、文件路径、问题描述字段
-5. **匹配到 0 个** → 提示用户未找到，建议检查描述或使用路径+行号
-6. **匹配到 1 个** → 直接进入评估
-7. **匹配到多个** → 列出所有匹配项，让用户选择
+1. Scan all `*.md` report files under `docs/review/`
+2. Extract all issue blocks with status `[todo]` or `[doing]`
+3. Extract keywords from the description (file names, issue characteristics, etc.)
+4. Match against issue titles, file paths, and issue description fields
+5. **0 matches** → inform the user that no match was found; suggest refining the description or using path + line number
+6. **1 match** → proceed directly to evaluation
+7. **Multiple matches** → list all matches and let the user choose
 
-### 3. 评估问题
+### 3. Evaluate Issue
 
-定位到问题后，不要直接按建议修复。先阅读报告中建议涉及的源文件上下文，独立评估：
+After locating the issue, do not apply the suggested fix blindly. First read the source file context referenced by the report's suggestion and evaluate independently:
 
-1. 读取问题中 `**文件**` 字段指向的源文件，了解实际代码
-2. 判断报告中 `**建议**` 是否合理：
-   - 建议是否准确解决了 `**问题**` 中描述的根因？
-   - 是否存在更简单或更好的修复方式？
-   - 修复是否会引入新问题或影响其他功能？
-3. 如果建议合理 → 沿用建议制定修复计划
-4. 如果建议需要调整 → 说明调整理由，给出自己的修复方案
+1. Read the source file indicated by the `**文件**` field to understand the actual code
+2. Judge whether the `**建议**` in the report is reasonable:
+   - Does the suggestion accurately address the root cause described in `**问题**`?
+   - Is there a simpler or better fix?
+   - Could the fix introduce new issues or affect other functionality?
+3. If the suggestion is reasonable → adopt it and formulate the fix plan
+4. If the suggestion needs adjustment → explain the reasoning and provide an alternative fix plan
 
-向用户展示评估结果：
+Present the evaluation result to the user:
 
 ```
-问题评估：
+Issue Evaluation:
 
-报告: docs/review/2026-04-26_full_review.md
-### #3 [shell] here-string 中变量未加引号
+Report: docs/review/2026-04-26_full_review.md
+### #3 [shell] Variable unquoted in here-string
 
 **文件**: `plugins/tmux/skills/tmux-send/scripts/tmux_send.sh:30`
-**问题**: ${BODY} 来自外部文件或用户传入参数，内容不受控...
-**建议**: 通过 printf '%s\n' "$BODY" 写入临时文件...
+**问题**: ${BODY} comes from an external file or user-supplied parameter, content is uncontrolled...
+**建议**: Use printf '%s\n' "$BODY" to write to a temp file...
 
-评估: {建议合理 / 建议需要调整，理由}
+Evaluation: {Suggestion is reasonable / Suggestion needs adjustment, reasoning}
 
-修复计划：
-- {具体的修复步骤}
+Fix plan:
+- {Specific fix steps}
 
-确认修复？
+Confirm fix?
 ```
 
-等待用户确认。用户可以：
-- 确认 → 执行修复
-- 提出修改意见 → 调整计划
-- 取消 → 结束
+Wait for user confirmation. The user can:
+- Confirm → execute the fix
+- Suggest modifications → adjust the plan
+- Cancel → exit
 
-### 4. 修复代码
+### 4. Fix Code
 
-根据评估确认的方案修复：
+Apply the fix based on the confirmed evaluation plan:
 
-1. 从 `**文件**: \`path/to/file:line\`` 提取文件路径和行号
-2. 读取源文件对应区域
-3. 执行修改
-4. 如果涉及多个文件，逐个修复
+1. Extract the file path and line number from `**文件**: \`path/to/file:line\``
+2. Read the corresponding region of the source file
+3. Apply the modification
+4. If multiple files are involved, fix them one by one
 
-修复时记录简要的修复说明，用于后续更新报告。
+Record a brief fix description during the fix for updating the report later.
 
-### 5. 更新报告
+### 5. Update Report
 
-修复完成后，更新报告文档中的对应问题块：
+After the fix is applied, update the corresponding issue block in the report document:
 
-**修改前：**
+**Before:**
 ```markdown
 **状态**: `[todo]`
 ```
 
-**修改后：**
+**After:**
 ```markdown
 **状态**: `[done]`
-**修复**: {简要说明做了什么修改，一句话}
+**修复**: {Brief description of what was changed, one sentence}
 ```
 
-注意：
-- 状态标记两边的反引号要保留：`` `[done]` ``
-- 修复说明要简洁，描述实际做了什么
+Notes:
+- Keep the backticks around the status marker: `` `[done]` ``
+- The fix description should be concise, describing what was actually done
 
-### 6. 更新统计和变更历史
+### 6. Update Statistics and Change History
 
-#### 更新 issue_stats
+#### Update issue_stats
 
-如果报告 frontmatter 包含 `issue_stats`，将对应级别数量减 1：
+If the report frontmatter contains `issue_stats`, decrement the count for the corresponding severity level:
 
 ```yaml
-# 修复前
+# Before fix
 issue_stats:
   high: 9
 
-# 修复后
+# After fix
 issue_stats:
   high: 8
 ```
 
-通过读取修复前的状态确定级别（问题在 `## CRITICAL`、`## HIGH`、`## MEDIUM` 还是 `## LOW` 区段下）。
+Determine the severity level by reading the issue's status before the fix (whether the issue is under the `## CRITICAL`, `## HIGH`, `## MEDIUM`, or `## LOW` section).
 
-#### 更新变更历史
+#### Update Change History
 
-在报告末尾的变更历史表格追加一行：
+Append a row to the change history table at the end of the report:
 
 ```markdown
-| 2026-04-26 | 修复 #3: {一句话修复说明} |
+| 2026-04-26 | 修复 #3: {one-sentence fix description} |
 ```
 
-### 7. 完成提示
+### 7. Completion Notice
 
 ```
-已修复并更新报告：
-- 源文件: plugins/tmux/skills/tmux-send/scripts/tmux_send.sh
-- 报告: docs/review/2026-04-26_full_review.md
-- 状态: [todo] → [done]
+Fixed and report updated:
+- Source file: plugins/tmux/skills/tmux-send/scripts/tmux_send.sh
+- Report: docs/review/2026-04-26_full_review.md
+- Status: [todo] → [done]
 ```
 
-## 边界情况
+## Edge Cases
 
-- **问题已是 `[done]` 或 `[skip]` 状态** → 提示用户该问题已处理，确认是否要重新修复
-- **源文件不存在或路径已变更** → 提示用户，建议手动定位
-- **修复涉及范围超出单个问题** → 在修复计划中明确说明影响范围
-- **多个问题指向同一文件** → 逐个修复，每次修复后更新对应问题状态
-- **报告中建议过时** → 源文件可能已经过其他修改，以当前代码为准调整修复方案
+- **Issue already has `[done]` or `[skip]` status** → inform the user that the issue has already been handled and confirm whether to re-fix
+- **Source file does not exist or path has changed** → inform the user and suggest manual location
+- **Fix scope exceeds a single issue** → clearly state the impact range in the fix plan
+- **Multiple issues point to the same file** → fix one by one, updating each issue's status after each fix
+- **Report suggestion is outdated** → the source file may have been modified by other changes; adjust the fix plan based on the current code

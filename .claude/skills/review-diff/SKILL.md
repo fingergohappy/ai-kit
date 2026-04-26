@@ -2,27 +2,28 @@
 name: review-diff
 description: |
   增量代码审查。基于 git diff 获取变更文件，启动子代理并行调用所有 review skills，汇总结果。
-  当用户说「review diff」、「审查变更」、「review 改动」、「检查 diff」时触发。
+  Incremental code review based on git diff. Launches sub-agents in parallel calling all review skills and aggregates results.
+  当用户说「review diff」「审查变更」「review 改动」「检查 diff」时触发。
   审查角度：shell 脚本质量、架构、skill 规范。
 argument-hint: "[<base_branch>]"
 ---
 
 # review-diff
 
-增量代码审查，基于 git diff 变更文件，子代理并行调用所有 review skills。
+Incremental code review based on git diff changes, with sub-agents calling all review skills in parallel.
 
-## 执行步骤
+## Execution Steps
 
-### 1. 获取变更文件
+### 1. Get Changed Files
 
-- 如果 `$ARGUMENTS` 指定了 base branch，使用 `git diff {base_branch}...HEAD --name-only`
-- 否则检测默认分支：
+- If `$ARGUMENTS` specifies a base branch, use `git diff {base_branch}...HEAD --name-only`
+- Otherwise detect the default branch:
 
 ```bash
-# 尝试获取默认分支
+# Try to get the default branch
 DEFAULT_BRANCH=$(git symbolic-ref refs/remotes/origin/HEAD 2>/dev/null | sed 's@^refs/remotes/origin/@@')
 if [ -z "$DEFAULT_BRANCH" ]; then
-  # fallback: 检查 main 或 master
+  # fallback: check main or master
   if git show-ref --verify --quiet refs/heads/main; then
     DEFAULT_BRANCH="main"
   elif git show-ref --verify --quiet refs/heads/master; then
@@ -31,81 +32,81 @@ if [ -z "$DEFAULT_BRANCH" ]; then
 fi
 ```
 
-- 如果当前分支就是默认分支，使用 `git diff HEAD~1 --name-only` 获取最近一次提交的变更
-- 同时获取未暂存和已暂存的变更：`git diff --name-only && git diff --cached --name-only`
-- 合并去重，过滤掉已删除的文件
+- If the current branch is the default branch, use `git diff HEAD~1 --name-only` to get the latest commit's changes
+- Also get unstaged and staged changes: `git diff --name-only && git diff --cached --name-only`
+- Merge, deduplicate, and filter out deleted files
 
-如果没有变更文件，告知用户并结束。
+If there are no changed files, inform the user and exit.
 
-### 2. 获取 diff 内容
+### 2. Get Diff Content
 
-对每个变更文件获取 diff 详情：
+Get diff details for each changed file:
 
 ```bash
 git diff {base}...HEAD -- {file_path}
 ```
 
-### 3. 并行启动子代理
+### 3. Launch Sub-agents in Parallel
 
-对以下 review skills 各启动一个子代理（使用 Agent 工具），将变更文件和 diff 内容作为输入：
+Launch one sub-agent for each of the following review skills (using Agent tool), passing changed files and diff content as input:
 
-- `review-shell` — shell 脚本质量审查
-- `review-architecture` — 架构审查
-- `review-skill-quality` — skill 规范审查
+- `review-shell` — shell script quality review
+- `review-architecture` — architecture review
+- `review-skill-quality` — skill specification review
 
-每个子代理：
-- 读取对应的 `.claude/skills/review-{角度}/SKILL.md`
-- 按其中定义的审查清单逐项检查
-- 重点关注变更部分，但也检查变更可能影响的上下文代码
+Each sub-agent:
+- Reads the corresponding `.claude/skills/review-{angle}/SKILL.md`
+- Checks items according to the review checklist defined therein
+- Focuses on changed parts but also checks context code that changes may affect
 
-子代理 prompt 格式：
-
-```
-请读取 .claude/skills/review-{角度}/SKILL.md，按其中的审查清单审查以下变更：
-
-变更文件：
-{文件列表}
-
-Diff 内容：
-{diff 详情}
-
-重点关注变更部分，但也检查变更可能影响的上下文代码。
-输出发现的问题，每个问题包含：严重级别、文件路径:行号、问题描述、修复建议。
-```
-
-### 4. 汇总结果
-
-等待所有子代理完成后，汇总审查结果：
-
-1. 按严重级别排序：CRITICAL → HIGH → MEDIUM → LOW
-2. 合并去重（不同角度可能发现同一问题）
-3. 统计各级别问题数量
-
-输出汇总：
+Sub-agent prompt format:
 
 ```
-## 审查汇总（增量）
+Read .claude/skills/review-{angle}/SKILL.md and review the following changes according to its checklist:
 
-基准: {base_branch}
-变更文件: {n} 个
+Changed files:
+{file list}
 
-| 级别 | 数量 |
-|------|------|
+Diff content:
+{diff details}
+
+Focus on changed parts but also check context code that changes may affect.
+Output issues found, each including: severity level, file path:line number, issue description, fix suggestion.
+```
+
+### 4. Aggregate Results
+
+After all sub-agents complete, aggregate review results:
+
+1. Sort by severity level: CRITICAL → HIGH → MEDIUM → LOW
+2. Merge and deduplicate (different angles may find the same issue)
+3. Count issues at each level
+
+Output summary:
+
+```
+## Review Summary (Incremental)
+
+Base: {base_branch}
+Changed files: {n}
+
+| Level | Count |
+|-------|-------|
 | CRITICAL | {n} |
 | HIGH | {n} |
 | MEDIUM | {n} |
 | LOW | {n} |
 
-{按级别排序的问题列表}
+{Issues sorted by level}
 ```
 
-### 5. 询问是否生成报告
+### 5. Ask to Generate Report
 
-汇总输出后询问用户：
+After the summary output, ask the user:
 
 ```
-是否生成审查报告到 docs/review/？
+Generate review report to docs/review/?
 ```
 
-- 用户确认 → 读取报告模板，填入审查结果，输出到 `docs/review/{日期}_diff_review.md`
-- 用户拒绝 → 结束
+- User confirms → read report template, fill in review results, output to `docs/review/{date}_diff_review.md`
+- User declines → exit

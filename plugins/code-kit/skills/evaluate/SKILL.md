@@ -12,236 +12,236 @@ argument-hint: "<要评估的内容>"
 
 # evaluate
 
-基于双源事实的严格评估。所有结论必须有来源、有推理。
+Rigorous evaluation based on dual-source evidence. Every conclusion must have a source and a reasoning chain.
 
-## 核心原则
+## Core Principles
 
-评估不能只靠外部搜索，也不能只看项目代码。需要从两个维度同时收集事实，交叉验证：
+Evaluation must not rely solely on external search, nor solely on project code. Facts must be collected from both dimensions simultaneously and cross-verified:
 
-- **项目事实**：实际代码、依赖版本、配置、git 历史、项目约定 — 代表"这里实际是什么"
-- **外部事实**：最佳实践、官方规范、社区共识、benchmark — 代表"应该是什么"
+- **Project facts**: actual code, dependency versions, configuration, git history, project conventions — representing "what actually is here"
+- **External facts**: best practices, official specifications, community consensus, benchmarks — representing "what should be"
 
-每个判断都要能追溯到具体来源，每个推理链条都要显式展示。
+Every judgment must be traceable to a specific source. Every reasoning chain must be explicitly shown.
 
-## 执行步骤
+## Execution Steps
 
-### 1. 解析评估目标
+### 1. Parse the Evaluation Target
 
-从 `$ARGUMENTS` 和对话上下文中提取：
+Extract from `$ARGUMENTS` and conversation context:
 
-- **评估对象**：具体是什么（库、工具、方案、声明、代码模式等）
-- **评估维度**：用户关心什么（性能？安全？维护性？准确性？性价比？）
-- **上下文信息**：对话中已有的相关信息
+- **Evaluation subject**: what specifically (library, tool, approach, claim, code pattern, etc.)
+- **Evaluation dimensions**: what the user cares about (performance? security? maintainability? accuracy? cost-effectiveness?)
+- **Contextual information**: any relevant information already present in the conversation
 
-如果评估目标不明确，向用户确认后再继续。
+If the evaluation target is unclear, confirm with the user before proceeding.
 
-### 2. 判断复杂度，选择执行策略
+### 2. Assess Complexity and Choose Execution Strategy
 
-根据评估对象判断复杂度：
+Judge complexity based on the evaluation subject:
 
-| 复杂度 | 判断依据 | 执行策略 |
-|--------|----------|----------|
-| 简单 | 单一事实验证、单文件代码、单一声明 | 主代理串行执行，不拆子代理 |
-| 复杂 | 技术选型、多维度对比、架构评估、review 批量验证 | 拆子代理并行收集事实 |
+| Complexity | Criteria | Execution Strategy |
+|------------|----------|--------------------|
+| Simple | Single fact verification, single-file code, single claim | Main agent executes serially, no sub-agents |
+| Complex | Tech selection, multi-dimensional comparison, architecture review, batch review verification | Split into sub-agents for parallel fact collection |
 
-简单评估：主代理自己读代码+搜索，直接跳到步骤 5。
+Simple evaluation: the main agent reads code + searches on its own, then jumps to step 5.
 
-复杂评估：按步骤 3-4 执行子代理并行模式。
+Complex evaluation: proceed through steps 3-4 using the sub-agent parallel pattern.
 
-### 3. 复杂评估：子代理并行收集事实
+### 3. Complex Evaluation: Parallel Sub-Agent Fact Collection
 
-根据评估复杂度确定子代理数量，用 Agent 工具 + `run_in_background: true` 并行启动。
+Determine the number of sub-agents based on evaluation complexity. Launch them in parallel using the Agent tool with `run_in_background: true`.
 
-**子代理拆分原则：**
+**Sub-agent splitting principles:**
 
-按评估维度拆，每个子代理负责一个独立的事实收集任务。常见拆法：
+Split by evaluation dimension. Each sub-agent is responsible for one independent fact-collection task. Common splits:
 
-| 评估场景 | 子代理拆法 | 说明 |
-|----------|-----------|------|
-| 技术选型 | 项目现状 + 每个候选方案各一个 | 并行对比多个方案 |
-| 单一声明验证 | 项目事实 + 外部搜索 | 最基本的拆法 |
-| Review 批量验证 | 每条结论各一个 | 每条独立验证，互不依赖 |
-| 架构评估 | 项目架构现状 + 业界方案搜索 + 竞品案例 | 三路并行 |
+| Evaluation Scenario | Sub-agent Split | Rationale |
+|---------------------|-----------------|-----------|
+| Tech selection | Project status + one per candidate | Parallel comparison of multiple options |
+| Single claim verification | Project facts + external search | The most basic split |
+| Batch review verification | One per conclusion | Each verified independently, no dependencies |
+| Architecture review | Project architecture status + industry solution search + competitor cases | Three-way parallel |
 
-**子代理任务模板：**
+**Sub-agent task templates:**
 
-项目事实类子代理：
+Project facts sub-agent:
 ```
-任务：收集 {评估对象} 在项目中的相关事实
-收集范围：
-  - 代码事实：读取相关源码，理解实现、调用链、使用方式
-  - 依赖事实：检查 package.json / go.mod / Cargo.toml / pyproject.toml 确认版本
-  - 配置事实：linter、formatter、CI 配置、CLAUDE.md 项目约定
-  - 历史事实：git log / git blame 了解变更频率和决策背景
-输出格式：按维度整理的事实列表，每条附文件路径:行号
-```
-
-外部事实类子代理：
-```
-任务：搜索 {评估对象} 的外部事实和最佳实践
-搜索策略：
-  - 广度搜索：exa + WebSearch + Context7，中英文各一轮
-  - 深度搜索：针对争议点搜反面证据、GitHub issues、竞品对比
-  - 搜索查询包含版本号和年份确保时效性
-输出格式：按维度整理的事实列表，每条附来源 URL
+Task: Collect relevant facts about {evaluation subject} within the project
+Collection scope:
+  - Code facts: read relevant source code, understand implementation, call chains, usage patterns
+  - Dependency facts: check package.json / go.mod / Cargo.toml / pyproject.toml to confirm versions
+  - Configuration facts: linter, formatter, CI config, CLAUDE.md project conventions
+  - History facts: git log / git blame to understand change frequency and decision context
+Output format: fact list organized by dimension, each item annotated with file path:line number
 ```
 
-所有子代理完成后，主代理汇总结果进入步骤 4。
-
-### 4. 交叉验证
-
-主代理拿到双源结果后，对比并发现矛盾：
-
-- 项目实际做法 vs 业界推荐做法的差异
-- 项目使用的版本是否存在已知问题
-- 项目的用法是否符合库/框架的官方推荐
-
-如果发现需要补充搜索的缺口，主代理自己补搜（不再拆子代理）。
-
-### 5. 整理证据
-
-将双源事实按评估维度整理，标注来源类型：
-
+External facts sub-agent:
 ```
-## 证据整理
-
-### 维度 A：{如 安全性}
-
-[项目事实]
-- 项目使用 X v2.3.1，配置了 Y（来源：package.json:12）
-- 代码中 Z 处存在未验证输入（来源：src/handler.ts:45）
-
-[外部事实]
-- X v2.3.1 存在已知 CVE-2025-XXXX（来源：url）
-- 官方文档推荐使用 W 替代 Y（来源：url）
-
-[矛盾/缺口]
-- 项目做法 A 与官方推荐 B 不一致，原因是 ...
+Task: Search for external facts and best practices about {evaluation subject}
+Search strategy:
+  - Breadth search: exa + WebSearch + Context7, one round in Chinese and one in English
+  - Depth search: search for counter-evidence on controversial points, GitHub issues, competitor comparisons
+  - Include version numbers and years in search queries to ensure timeliness
+Output format: fact list organized by dimension, each item annotated with source URL
 ```
 
-### 6. 严格评估
+Once all sub-agents complete, the main agent aggregates results and proceeds to step 4.
 
-基于双源证据进行评估，遵循以下规则：
+### 4. Cross-Verification
 
-**推理透明**：每个结论展示完整推理链条：
+After the main agent receives dual-source results, compare and identify contradictions:
+
+- Discrepancies between the project's actual practices and industry recommendations
+- Whether the versions used in the project have known issues
+- Whether the project's usage aligns with the library/framework's official recommendations
+
+If gaps requiring additional search are discovered, the main agent searches on its own (no more sub-agents).
+
+### 5. Organize Evidence
+
+Organize dual-source facts by evaluation dimension, annotating source types:
+
 ```
-结论：X 在 Y 场景下优于 Z
-推理：
-  1. [项目] 当前代码使用 Z，覆盖了 N 个文件（来源：git grep）
-  2. [外部] X 的 benchmark 数据为 ...（来源：url）
-  3. [外部] Z 在同样场景下的数据为 ...（来源：url）
-  4. [外部] 但 X 在 ... 条件下会退化（来源：url）
-  5. [推断] 在项目的 Y 场景中，X 更优，因为 ...
+## Evidence Summary
+
+### Dimension A: {e.g., Security}
+
+[Project Facts]
+- Project uses X v2.3.1, configured with Y (source: package.json:12)
+- Unvalidated input exists at Z in the code (source: src/handler.ts:45)
+
+[External Facts]
+- X v2.3.1 has known CVE-2025-XXXX (source: url)
+- Official documentation recommends using W instead of Y (source: url)
+
+[Contradictions/Gaps]
+- Project practice A is inconsistent with official recommendation B, reason is ...
 ```
 
-**区分来源类型**：
-- `[项目]` — 来自项目代码、配置、历史的陈述
-- `[外部]` — 有明确 URL 或文档引用的外部事实
-- `[推断]` — 基于事实的推理，说明推断依据
-- `[不确定]` — 信息不足无法判断，明确说明
+### 6. Rigorous Evaluation
 
-**反面证据必须呈现**：如果搜索到了不利于最终结论的证据，必须列出并解释为什么没有采纳。
+Evaluate based on dual-source evidence, following these rules:
 
-### 7. 输出评估报告
+**Transparent reasoning**: show the complete reasoning chain for each conclusion:
+```
+Conclusion: X outperforms Z in scenario Y
+Reasoning:
+  1. [Project] Current code uses Z, covering N files (source: git grep)
+  2. [External] X's benchmark data is ... (source: url)
+  3. [External] Z's data in the same scenario is ... (source: url)
+  4. [External] However, X degrades under ... conditions (source: url)
+  5. [Inference] In the project's Y scenario, X is superior because ...
+```
 
-使用以下格式：
+**Distinguish source types**:
+- `[Project]` — statements from project code, configuration, or history
+- `[External]` — external facts with clear URLs or document references
+- `[Inference]` — reasoning based on facts, with inference basis explained
+- `[Uncertain]` — insufficient information to judge, clearly stated
+
+**Counter-evidence must be presented**: if evidence unfavorable to the final conclusion was found during search, it must be listed and an explanation provided for why it was not adopted.
+
+### 7. Output Evaluation Report
+
+Use the following format:
 
 ```markdown
-# 评估：{评估对象}
+# Evaluation: {evaluation subject}
 
-## 结论摘要
+## Conclusion Summary
 
-{一句话结论，如果需要前提条件要说明}
+{one-sentence conclusion, state any prerequisites if applicable}
 
-## 评估维度
+## Evaluation Dimensions
 
-### {维度 1}
-- **评级**：{优秀 / 良好 / 一般 / 较差 / 危险}
-- **判断**：{具体说明}
-- **证据**：
-  - [项目] {项目内事实，附文件路径或行号}
-  - [外部] {外部事实，附 url}
-  - [推断] {推理过程}
+### {Dimension 1}
+- **Rating**: {Excellent / Good / Fair / Poor / Dangerous}
+- **Assessment**: {specific explanation}
+- **Evidence**:
+  - [Project] {in-project fact, with file path or line number}
+  - [External] {external fact, with url}
+  - [Inference] {reasoning process}
 
-### {维度 2}
+### {Dimension 2}
 ...
 
-## 争议与风险
+## Controversies and Risks
 
-{双源证据之间的矛盾、未确认信息、潜在风险}
+{contradictions between dual-source evidence, unconfirmed information, potential risks}
 
-## 局限性
+## Limitations
 
-{本次评估的局限：搜索覆盖面、项目事实的完整度、时效性}
+{limitations of this evaluation: search coverage, completeness of project facts, timeliness}
 ```
 
-### 8. 给出建议（如果适用）
+### 8. Provide Recommendations (if applicable)
 
-如果评估发现了问题或改进空间，给出可操作的建议：
+If the evaluation reveals issues or room for improvement, provide actionable recommendations:
 
-- 具体到文件和行号的修改建议
-- 优先级排序（哪些应该立即改，哪些可以后续处理）
-- 每个建议附上理由和来源
+- Specific modification suggestions with file and line numbers
+- Prioritized (what should be changed immediately vs. what can be addressed later)
+- Each recommendation accompanied by rationale and source
 
-## 搜索何时停止
+## When to Stop Searching
 
-不按次数判断，按证据充分度判断。停止搜索的条件：
+Do not judge by search count; judge by evidence sufficiency. Conditions for stopping search:
 
-- 关键判断至少有 2 个独立来源互相印证
-- 搜索了反面证据（"X 问题"、"X 缺陷"）且没有发现未处理的重大矛盾
-- 信息缺口不影响最终结论（如果影响，继续搜）
-- 同一维度的不同来源说法一致，没有新的矛盾出现
+- Key judgments have at least 2 independent sources corroborating each other
+- Counter-evidence has been searched ("X issues", "X defects") and no unaddressed major contradictions were found
+- Information gaps do not affect the final conclusion (if they do, continue searching)
+- Different sources for the same dimension agree, with no new contradictions emerging
 
-如果搜了 3 轮还在发现新的矛盾信息，说明评估比预想的复杂，应该告知用户并建议升级为深度评估。
+If 3 rounds of searching still reveal new contradictory information, the evaluation is more complex than expected. Inform the user and suggest escalating to a deep evaluation.
 
-## 常见评估场景
+## Common Evaluation Scenarios
 
-### 技术选型评估
+### Tech Selection Evaluation
 
-- [项目] 当前用什么、版本、依赖深度、替换成本
-- [外部] GitHub 活跃度、下载量、已知 issues、社区评价、竞品对比
-- [演变] 技术的生命周期判断：是上升期、稳定期还是衰退期？社区是在聚集还是在流失？核心团队是否可持续维护？是否有明确的技术路线图？选型不能只看"现在够用"，要评估 1-2 年后的走向。如果某个库正在被官方替代（如 moment → dayjs、requests → httpx），即使当前版本还能用也要标注风险。
+- [Project] what is currently used, versions, dependency depth, migration cost
+- [External] GitHub activity, download counts, known issues, community feedback, competitor comparisons
+- [Trajectory] technology lifecycle assessment: is it growing, stable, or declining? Is the community gathering or dispersing? Is the core team sustainably maintaining it? Is there a clear technical roadmap? Selection cannot be based solely on "good enough now" — evaluate the trajectory over 1-2 years. If a library is being officially replaced (e.g., moment -> dayjs, requests -> httpx), flag the risk even if the current version still works.
 
-### 代码实践评估
+### Code Practice Evaluation
 
-- [项目] 实际代码怎么写的、影响范围、是否有测试覆盖
-- [外部] 官方文档推荐、社区共识、反面案例、版本演进变化
+- [Project] how the code is actually written, scope of impact, whether test coverage exists
+- [External] official documentation recommendations, community consensus, counter-examples, version evolution changes
 
-### 声明验证
+### Claim Verification
 
-- [项目] 声明在项目中的体现和上下文
-- [外部] 原始来源、可信引用、反驳证据、前提条件
+- [Project] how the claim manifests in the project and its context
+- [External] original source, credible references, refuting evidence, prerequisites
 
-### 架构方案评估
+### Architecture Proposal Evaluation
 
-- [项目] 当前架构、模块边界、依赖方向、变更频率
-- [外部] 业界同类问题的解决方案、架构模式的优缺点、大规模案例
+- [Project] current architecture, module boundaries, dependency direction, change frequency
+- [External] industry solutions for similar problems, pros and cons of architecture patterns, large-scale case studies
 
-### Review 结论评估
+### Review Conclusion Evaluation
 
-当用户提供 review 报告路径或引用某条审查结论时，验证该结论是否成立。
+When the user provides a review report path or references a specific review conclusion, verify whether that conclusion holds.
 
-**识别方式**：用户说「评估下这条 review 结论」「这个审查意见对不对」「评估 review」，或提供报告路径+行号。
+**Identification**: the user says "evaluate this review conclusion", "is this review finding correct", "evaluate review", or provides a report path + line number.
 
-执行流程：
-1. 读取报告，定位到具体的审查结论
-2. 提取结论中的关键声明（如"X 做法不安全"、"应该用 Y 替代"）
-3. 读取相关源码，确认结论描述的问题是否真实存在（有时报告基于旧代码，实际已修复）
-4. 搜索外部证据验证结论中的建议是否符合最佳实践
-5. 逐条给出判定：
+Execution flow:
+1. Read the report, locate the specific review conclusion
+2. Extract key claims from the conclusion (e.g., "X practice is insecure", "should use Y instead")
+3. Read the relevant source code to confirm whether the issue described in the conclusion actually exists (sometimes reports are based on old code that has since been fixed)
+4. Search for external evidence to verify whether the conclusion's recommendation aligns with best practices
+5. Provide a judgment for each item:
 
 ```
-### 结论 #N：{结论标题}
+### Conclusion #N: {conclusion title}
 
-- **原文判断**：{报告说了什么}
-- **项目事实**：{当前代码实际情况，附文件:行号}
-- **外部证据**：{搜索结果，附来源}
-- **最终判定**：{成立 / 部分成立 / 不成立 / 无法验证}
-- **理由**：{推理过程}
+- **Original judgment**: {what the report says}
+- **Project facts**: {actual current code situation, with file:line number}
+- **External evidence**: {search results, with sources}
+- **Final verdict**: {Valid / Partially Valid / Invalid / Unverifiable}
+- **Reasoning**: {reasoning process}
 ```
 
-常见判定情况：
-- **成立**：项目事实确认问题存在，外部证据支持建议
-- **部分成立**：问题存在但建议的修复方案不够好，或前提条件不完全适用
-- **不成立**：问题已不存在（代码已变更），或建议基于过时信息，或建议在当前场景不适用
-- **无法验证**：搜索未找到足够证据，需要人工判断
+Common verdict outcomes:
+- **Valid**: project facts confirm the issue exists, external evidence supports the recommendation
+- **Partially Valid**: the issue exists but the recommended fix is suboptimal, or prerequisites do not fully apply
+- **Invalid**: the issue no longer exists (code has changed), or the recommendation is based on outdated information, or the recommendation does not apply in the current context
+- **Unverifiable**: search did not find sufficient evidence; requires human judgment

@@ -1,180 +1,180 @@
 ---
 name: skill-i18n
 description: |
-  当用户说「翻译 skill」「skill 双语」「生成 zh-CN」「同步翻译」时触发。Bilingual skill management: generates SKILL.md (English) + zh-CN.md (Chinese) pairs, and auto-syncs zh-CN.md when SKILL.md changes.
-  Auto-triggers after: creating a new skill, editing an existing SKILL.md, skill-creator workflow completion, or any skill content modification.
-  Supports single or multiple skill paths, auto-detects source language, and performs incremental sync when zh-CN.md already exists.
-argument-hint: "<skill路径> [skill路径2] ..."
+  当用户说「翻译 skill」「skill 双语」「生成 zh-CN」「同步翻译」时触发。skill-creator 完成创建/迭代、手动编辑了 SKILL.md 时也会自动触发。支持单个或多个 skill 路径，自动检测源语言，已有 zh-CN.md 时执行增量同步。
+  Bilingual skill management: generates SKILL.md (English) + zh-CN.md (Chinese) pairs, and auto-syncs zh-CN.md when SKILL.md changes. Auto-triggers after creating a new skill, editing an existing SKILL.md, or skill-creator workflow completion. Supports single or multiple skill paths, auto-detects source language, and performs incremental sync when zh-CN.md already exists.
+argument-hint: "<skill path> [skill path 2] ..."
 ---
 
 # skill-i18n
 
-将 ai-kit 项目中的 skill 转换为双语版本：SKILL.md（英文）+ zh-CN.md（中文）。
+Convert skills in the ai-kit project to bilingual format: SKILL.md (English) + zh-CN.md (Chinese).
 
-## 硬性约束
+## Hard Constraints
 
-- **增量同步和自动同步时，禁止修改 SKILL.md 原文档** — 只允许修改 zh-CN.md
-- SKILL.md 只在全量生成阶段（目录下不存在 SKILL.md 或原始为中文需要翻译为英文）才会被写入或覆盖
-- 如果用户仅说「同步翻译」「更新翻译」，则只更新 zh-CN.md，不触碰 SKILL.md
+- **During incremental sync and auto-sync, modifying the original SKILL.md is prohibited** — only zh-CN.md may be modified
+- SKILL.md is only written or overwritten during the full generation phase (when SKILL.md doesn't exist in the directory or the original is Chinese and needs English translation)
+- If the user only says "sync translation" or "update translation", only update zh-CN.md, do not touch SKILL.md
+- **The `description` field in both SKILL.md and zh-CN.md must always be bilingual (Chinese + English)** — never write a monolingual description
 
-## 参数解析
+## Argument Parsing
 
-`$ARGUMENTS` 支持以下输入：
+`$ARGUMENTS` supports the following inputs:
 
-| 形式 | 示例 | 解析方式 |
-|------|------|---------|
-| 目录路径 | `plugins/code-kit/skills/fix-review` | 读取目录下的 SKILL.md |
-| 文件路径 | `plugins/code-kit/skills/fix-review/SKILL.md` | 直接读取 |
-| 多个路径 | `plugins/code-kit/skills/fix-review plugins/tmux/skills/tmux-send` | 逐个处理 |
+| Form | Example | How to Parse |
+|------|---------|-------------|
+| Directory path | `plugins/code-kit/skills/fix-review` | Read SKILL.md in the directory |
+| File path | `plugins/code-kit/skills/fix-review/SKILL.md` | Read directly |
+| Multiple paths | `plugins/code-kit/skills/fix-review plugins/tmux/skills/tmux-send` | Process each one |
 
-如果传入目录，自动查找其中的 SKILL.md。
+If a directory is passed, automatically find the SKILL.md within it.
 
-## 双语格式规范
+## Bilingual Format Specification
 
-以 nvim-lsp-init 为参照模板，两个文件的格式如下：
+Use nvim-lsp-init as the reference template. The two file formats are:
 
-### SKILL.md（英文版）
+### SKILL.md (English Version)
 
 ```yaml
 ---
 name: <skill-name>
-description: <中文触发词>。<English description of what the skill does>
-argument-hint: "<参数说明>"
+description: <Chinese trigger phrases>. <English description of what the skill does>
+argument-hint: "<parameter description>"
 ---
 ```
 
-- frontmatter `description`：先写中文触发短语（当用户说「...」时触发），再写英文功能描述
-- body 全部用英文
-- 代码块、命令、路径保持原样
+- frontmatter `description`: **must be bilingual** — Chinese trigger phrases first (triggered when user says "..."), then English functional description
+- Body entirely in English
+- Code blocks, commands, paths kept as-is
 
-### zh-CN.md（中文版）
+### zh-CN.md (Chinese Version)
 
 ```yaml
 ---
 name: <skill-name>
-description: <English description of what the skill does>
+description: <Chinese description>. <English description of what the skill does>
 when_to_use: |
   当用户说「...」「...」时触发。
-argument-hint: "<参数说明>"
+argument-hint: "<parameter description>"
 ---
 ```
 
-- frontmatter `description`：纯英文功能描述
-- frontmatter `when_to_use`：中文触发场景
-- body 全部用中文
-- section 标题保持英文（如 `## Overview`、`### 1. Detect environment`）
-- 代码块、命令、路径、变量名保持原样
+- frontmatter `description`: **must be bilingual** — Chinese functional description first, then English functional description
+- frontmatter `when_to_use`: Chinese trigger scenarios
+- Body entirely in Chinese
+- Section headers kept in English (e.g., `## Overview`, `### 1. Detect environment`)
+- Code blocks, commands, paths, variable names kept as-is
 
-## 执行步骤
+## Execution Steps
 
-### 1. 读取原始 skill
+### 1. Read Original Skill
 
-1. 解析参数，定位每个 SKILL.md
-2. 读取完整内容，解析 frontmatter 和 body
+1. Parse arguments, locate each SKILL.md
+2. Read complete content, parse frontmatter and body
 
-### 2. 检测语言
+### 2. Detect Language
 
-判断 body 的主要语言：
+Determine the primary language of the body:
 
-- 中文字符占比 > 30% → 原始语言为中文
-- 否则 → 原始语言为英文
+- Chinese character ratio > 30% → original language is Chinese
+- Otherwise → original language is English
 
-### 3. 生成双语版本
+### 3. Generate Bilingual Versions
 
-#### 原始为中文
+#### Original is Chinese
 
-1. **SKILL.md**（英文版）：
-   - 翻译 body 为英文
-   - 保留所有代码块、命令、路径、表格结构不变
-   - frontmatter description：保留原始中文触发词 + 翻译英文功能描述
-   - section 标题翻译为英文
+1. **SKILL.md** (English version):
+   - Translate body to English
+   - Preserve all code blocks, commands, paths, table structures
+   - frontmatter description: keep original Chinese trigger phrases + translate English functional description
+   - Translate section headers to English
 
-2. **zh-CN.md**（中文版）：
-   - body 保留原始中文内容
-   - section 标题翻译为英文（与 SKILL.md 一致）
-   - frontmatter 按 zh-CN.md 格式重组（description 英文、when_to_use 中文）
+2. **zh-CN.md** (Chinese version):
+   - Keep original Chinese body content
+   - Translate section headers to English (matching SKILL.md)
+   - Reorganize frontmatter per zh-CN.md format (bilingual description, when_to_use in Chinese)
 
-#### 原始为英文
+#### Original is English
 
-1. **SKILL.md**（英文版）：
-   - body 保留原始英文内容
-   - frontmatter description：添加中文触发词 + 保留英文描述
+1. **SKILL.md** (English version):
+   - Keep original English body content
+   - frontmatter description: add Chinese trigger phrases + keep English description
 
-2. **zh-CN.md**（中文版）：
-   - 翻译 body 为中文
-   - section 标题保持英文
-   - 保留所有代码块、命令、路径、表格结构不变
-   - frontmatter 按 zh-CN.md 格式重组
+2. **zh-CN.md** (Chinese version):
+   - Translate body to Chinese
+   - Keep section headers in English
+   - Preserve all code blocks, commands, paths, table structures
+   - Reorganize frontmatter per zh-CN.md format
 
-### 4. 翻译原则
+### 4. Translation Principles
 
-- 技术术语保持原文：LSP、PATH、frontmatter、skill、plugin 等
-- 代码块内容不翻译，代码注释翻译
-- 表格结构保持一致，只翻译文字内容
-- markdown 格式标记保持不变
-- 如果原始 SKILL.md 已有 zh-CN.md，读取现有翻译作为参考，避免术语不一致
+- Keep technical terms as-is: LSP, PATH, frontmatter, skill, plugin, etc.
+- Don't translate code block content, do translate code comments
+- Keep table structures consistent, only translate text content
+- Keep markdown format markers unchanged
+- If the original SKILL.md already has a zh-CN.md, read existing translation as reference to avoid terminology inconsistency
 
-### 5. 写入文件
+### 5. Write Files
 
-将两个文件写入原始 skill 的同一目录：
+Write both files to the same directory as the original skill:
 
 ```
 plugins/code-kit/skills/fix-review/
-├── SKILL.md      # 英文版（新生成或更新）
-└── zh-CN.md      # 中文版（新生成或更新）
+├── SKILL.md      # English version (newly generated or updated)
+└── zh-CN.md      # Chinese version (newly generated or updated)
 ```
 
-### 6. 输出确认
+### 6. Output Confirmation
 
-对每个处理的 skill 显示：
+For each processed skill, display:
 
 ```
 skill-i18n: fix-review
-  原始语言: 中文
-  SKILL.md: 已生成（英文）
-  zh-CN.md: 已生成（中文）
+  Original language: Chinese
+  SKILL.md: Generated (English)
+  zh-CN.md: Generated (Chinese)
 ```
 
-多个 skill 时汇总：
+For multiple skills, summarize:
 
 ```
-完成 3 个 skill 的双语转换：
+Completed bilingual conversion for 3 skills:
   - fix-review ✅
   - fix-review-all ✅
   - tmux-send ✅
 ```
 
-## 自动同步
+## Auto Sync
 
-当检测到以下操作涉及 SKILL.md 时，**必须**主动同步对应的 zh-CN.md：
+When the following operations involve SKILL.md, **must** proactively sync the corresponding zh-CN.md:
 
-| 触发场景 | 同步行为 |
-|----------|---------|
-| skill-creator 完成创建/迭代 | 自动更新该 skill 的 zh-CN.md |
-| 手动编辑了 SKILL.md 内容 | 自动更新该 skill 的 zh-CN.md |
-| 用户说「更新翻译」「同步翻译」 | 重新生成/更新 zh-CN.md |
+| Trigger Scenario | Sync Behavior |
+|-----------------|---------------|
+| skill-creator completes creation/iteration | Auto-update that skill's zh-CN.md |
+| SKILL.md content manually edited | Auto-update that skill's zh-CN.md |
+| User says "update translation" or "sync translation" | Regenerate/update zh-CN.md |
 
-### 同步流程
+### Sync Workflow
 
-1. 检测目标 skill 目录下是否已有 zh-CN.md
-2. 如果有 → 增量同步：对比 SKILL.md 和 zh-CN.md，更新变更的 section，保留未变更的翻译
-3. 如果没有 → 全量生成：按上方「执行步骤」生成 zh-CN.md
-4. 输出同步结果：`已同步 zh-CN.md (增量/全量)`
+1. Check if zh-CN.md already exists in the target skill directory
+2. If yes → incremental sync: compare SKILL.md and zh-CN.md, update changed sections, preserve unchanged translations
+3. If no → full generation: generate zh-CN.md per "Execution Steps" above
+4. Output sync result: `Synced zh-CN.md (incremental/full)`
 
-### 翻译文档的质量保证
+### Translation Quality Assurance
 
-翻译文档（zh-CN.md）可通过 `skill-creator` skill 的评估流程来验证质量：
+Translation documents (zh-CN.md) can be verified through the `skill-creator` skill's evaluation workflow:
 
-1. 将已生成的 SKILL.md（英文版）作为输入
-2. 使用 `skill-creator` 创建 zh-CN.md，遵循本 skill 定义的双语格式规范
-3. `skill-creator` 的迭代和评估流程同样适用于翻译文档的质量把控
+1. Use the generated SKILL.md (English version) as input
+2. Use `skill-creator` to create zh-CN.md, following the bilingual format specification defined in this skill
+3. `skill-creator`'s iteration and evaluation workflow also applies to translation document quality control
 
-这样翻译文档也能经过 skill-creator 的测试和评估循环，确保翻译质量。
+This way translation documents also go through skill-creator's testing and evaluation loop, ensuring translation quality.
 
-## 边界情况
+## Edge Cases
 
-- **已有双语文件** → 提示用户是否覆盖，默认覆盖
-- **SKILL.md 中混合中英文** → 以占比高的语言为原始语言
-- **frontmatter 中有非标准字段** → 原样保留，不删除
-- **body 中有引用其他文件的相对路径** → 保持不变
-- **参数为空** → 提示用法
+- **Existing bilingual files** → Prompt user whether to overwrite, default to overwrite
+- **Mixed Chinese/English in SKILL.md** → Use the higher ratio language as original language
+- **Non-standard fields in frontmatter** → Keep as-is, do not remove
+- **Relative paths referencing other files in body** → Keep unchanged
+- **Empty arguments** → Show usage instructions

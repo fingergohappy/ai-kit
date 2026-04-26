@@ -5,59 +5,62 @@ description: |
   任务执行完成后向发起方 pane 汇报执行结果。
   只要任务完成、收到 [task from ...] 或 [fix from ...] 标签、
   或用户说「汇报结果」、「告诉对方完成了」、「report」，就应该使用此 skill。
+  Report execution results to the originating pane after a task completes.
+  Use this skill whenever a task finishes, a [task from ...] or [fix from ...] tag
+  is received, or the user says "汇报结果", "告诉对方完成了", or "report".
 argument-hint: "[<target_pane_id>]"
 context: fork
 ---
 
 # report
 
-任务完成后，向发起方的 tmux pane 汇报工作成果。
+After a task completes, report the results to the originating tmux pane.
 
-## 工作流程
+## Workflow
 
-1. 确定 target_pane_id：
-   - 优先从收到的 `[task from ..., pane_id: xxx, loop: xxx]` 或 `[fix from ..., pane_id: xxx, loop: xxx]` 标签中提取
-   - 其次使用 `$ARGUMENTS` 传入的值
-   - 仍未知则询问用户
-2. 提取 loop 字段：
-   - 从收到的标签中提取 `loop: true` 或 `loop: false`
-   - 如果标签中没有 loop 字段，默认为 `false`
-   - **必须原样传递到汇报消息的标签中**
-3. 生成汇报消息，通过 tmux-send skill 发送到 target_pane_id
+1. Determine target_pane_id:
+   - First, extract from the received `[task from ..., pane_id: xxx, loop: xxx]` or `[fix from ..., pane_id: xxx, loop: xxx]` tag
+   - Then fall back to the value passed via `$ARGUMENTS`
+   - If still unknown, ask the user
+2. Extract the loop field:
+   - Extract `loop: true` or `loop: false` from the received tag
+   - If the tag has no loop field, default to `false`
+   - **Must be passed verbatim into the report message tag**
+3. Generate the report message and send it to target_pane_id via the tmux-send skill
 
-## 脚本路径
+## Script Path
 
-所有 `scripts/` 路径相对于**本 SKILL.md 文件所在目录**。执行前必须先解析为绝对路径：
+All `scripts/` paths are relative to **the directory containing this SKILL.md file**. Resolve them to absolute paths before execution:
 
 ```bash
 SKILL_DIR="$(dirname "$(realpath "${BASH_SOURCE[0]}")")"  # 或直接使用本文件所在目录的绝对路径
 ```
 
-后续命令中用 `"$SKILL_DIR/scripts/xxx.sh"` 替代裸 `scripts/xxx.sh`。
+Use `"$SKILL_DIR/scripts/xxx.sh"` instead of bare `scripts/xxx.sh` in subsequent commands.
 
-## 生成汇报消息
+## Generate Report Message
 
-使用 `"$SKILL_DIR/scripts/generate_message.sh"` 生成完整汇报消息，不要手动拼接模板内容。
+Use `"$SKILL_DIR/scripts/generate_message.sh"` to generate the full report message. Do not assemble template content manually.
 
-**必须且只能**通过该脚本生成消息。严禁自己拼接或手写——保证格式一致、避免遗漏字段。
+You **must** use this script exclusively to generate the message. Never assemble or hand-write it yourself -- this ensures consistent formatting and prevents missing fields.
 
-### 参数说明
+### Parameter Reference
 
-必填参数：
-- `--tool-name`：当前 AI 工具名称（如 `Claude Code`、`Cursor` 等）
-- `--loop`：从收到的标签中提取的 loop 值（`true` 或 `false`）
-- `--desc`：执行结果的一句话简要描述
-- `--original-task`：原始任务内容（文档路径或内联任务描述）
-- `--completed`：已完成的任务数量
-- `--skipped`：已跳过的任务数量
+Required parameters:
+- `--tool-name`: Current AI tool name (e.g., `Claude Code`, `Cursor`, etc.)
+- `--loop`: Loop value extracted from the received tag (`true` or `false`)
+- `--desc`: One-sentence summary of the execution result
+- `--original-task`: Original task content (document path or inline task description)
+- `--completed`: Number of completed tasks
+- `--skipped`: Number of skipped tasks
 
-可选参数：
-- `--unprocessed`：未处理的任务数量（无则省略）
-- `--evaluate`：gate-evaluate 评估结论（空则省略该节）
-- `--skip-reasons`：跳过项说明（空则省略该节）
-- `--issues`：遗留问题（空则省略该节）
+Optional parameters:
+- `--unprocessed`: Number of unprocessed tasks (omit if none)
+- `--evaluate`: gate-evaluate assessment conclusion (omit if empty)
+- `--skip-reasons`: Explanation for skipped items (omit if empty)
+- `--issues`: Outstanding issues (omit if empty)
 
-### 调用示例
+### Invocation Example
 
 ```bash
 MSG_FILE=$(bash "$SKILL_DIR/scripts/generate_message.sh" \
@@ -73,7 +76,7 @@ MSG_FILE=$(bash "$SKILL_DIR/scripts/generate_message.sh" \
   --issues "{遗留问题说明}")
 ```
 
-全部顺利完成时，省略可选参数即可：
+When everything completes successfully, omit the optional parameters:
 
 ```bash
 MSG_FILE=$(bash "$SKILL_DIR/scripts/generate_message.sh" \
@@ -85,17 +88,17 @@ MSG_FILE=$(bash "$SKILL_DIR/scripts/generate_message.sh" \
   --skipped 0)
 ```
 
-## 发送消息
+## Send Message
 
-通过 tmux-send skill 将生成的消息文件发送到 target_pane_id：
+Send the generated message file to target_pane_id via the tmux-send skill:
 
 ```
 /tmux-send {target_pane_id} {MSG_FILE}
 ```
 
-## 生成规则
+## Generation Rules
 
-- 原始任务类型：**文档路径** → 引用路径；**内联内容** → 原样附上
-- 完成情况必须量化
-- 全部顺利完成时，省略 `--evaluate`、`--skip-reasons`、`--issues`
-- 如果 gate-evaluate 评估导致跳过或拒绝，必须通过 `--evaluate` 和 `--skip-reasons` 体现
+- Original task type: **document path** -> reference the path; **inline content** -> include verbatim
+- Completion status must be quantified
+- When everything completes successfully, omit `--evaluate`, `--skip-reasons`, and `--issues`
+- If gate-evaluate causes tasks to be skipped or rejected, this must be reflected via `--evaluate` and `--skip-reasons`
