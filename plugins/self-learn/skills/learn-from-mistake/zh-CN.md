@@ -1,7 +1,7 @@
 ---
 name: learn-from-mistake
 description: |
-  AI 被用户纠正后，主动提议将教训固化为防护规则。根据错误复杂度生成新 skill 或追加到 CLAUDE.md。
+  将 AI 被纠正的教训固化为防护规则。当用户纠正 AI 行为时触发，生成新 skill 或更新 CLAUDE.md 规则。
 when_to_use: |
   当 AI 被用户纠正错误后主动触发。AI 应在纠正后主动提议：「要不要把这个教训固化下来？」不触发的场景：用户只是在讨论错误但不针对当前 AI 行为。
 argument-hint: "[<错误描述>]"

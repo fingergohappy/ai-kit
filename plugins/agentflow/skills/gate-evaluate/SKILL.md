@@ -2,11 +2,7 @@
 name: gate-evaluate
 model: opus
 description: |
-  Entry gate for the receiving end. Evaluates incoming content (tasks, fix
-  instructions, etc.) for reasonableness before execution. Only executes if
-  the evaluation passes; skips or rejects otherwise. Should be triggered
-  before execution when a message contains [task from ...] or [fix from ...]
-  tags. Also triggered when the user says "evaluate".
+  Entry gate that evaluates incoming tasks or fix instructions for reasonableness before execution. Rejects or skips unreasonable requests.
 argument-hint: "[<content to evaluate>]"
 context: fork
 disable-model-invocation: false

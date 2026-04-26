@@ -1,7 +1,7 @@
 ---
 name: rebase-to-root
 description: |
-  将 worktree 的功能分支 rebase 回根仓库的当前分支。支持从 worktree 内调用（自动检测分支）或从根仓库调用（列出 worktree 供选择）。
+  将 worktree 的功能分支 rebase 回根仓库的当前分支。支持从 worktree 内或根仓库调用。
 when_to_use: |
   当用户说「rebase」「合回去」「merge 回去」「rebase 到 root」时触发。
 argument-hint: "[feature 名称，留空则自动检测]"

@@ -1,9 +1,7 @@
 ---
 name: review-init
 description: |
-  Analyze the current project's tech stack, dependencies, and code structure to generate customized code review skills.
-  Triggered when the user says "generate review", "initialize review", "review init", or "generate code review".
-  If the project already has review skills, use merge logic: show existing + new suggestions, and let the user decide what to add or remove.
+  Analyze project tech stack and generate customized code review skills. Merges with existing review skills if present.
 argument-hint: ""
 disable-model-invocation: false
 ---

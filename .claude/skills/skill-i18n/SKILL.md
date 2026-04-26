@@ -1,7 +1,7 @@
 ---
 name: skill-i18n
 description: |
-  Bilingual skill management: generates SKILL.md (English) + zh-CN.md (Chinese) pairs, and auto-syncs zh-CN.md when SKILL.md changes. Auto-triggers after creating a new skill, editing an existing SKILL.md, or skill-creator workflow completion. Supports single or multiple skill paths, auto-detects source language, and performs incremental sync when zh-CN.md already exists.
+  Generate and sync bilingual skill pairs: SKILL.md (English) + zh-CN.md (Chinese). Auto-detects source language and performs incremental sync.
 argument-hint: "<skill path> [skill path 2] ..."
 ---
 

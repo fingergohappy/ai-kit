@@ -1,9 +1,7 @@
 ---
 name: take-note
 description: |
-  Generate structured learning notes from user's oral description, reference materials, or conversation context.
-  Each note gets its own directory containing a Markdown document + runnable minimal code examples.
-  Also triggers when user shares a learning URL/file and asks to generate notes, or when user says they just finished studying something and want it captured.
+  Generate structured learning notes with Markdown docs and runnable code examples. Each note gets its own directory.
 argument-hint: "[<topic>] [--dir <path>] [--from <url|file>]"
 disable-model-invocation: false
 ---

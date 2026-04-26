@@ -1,10 +1,9 @@
 ---
 name: take-note
 description: |
-  从用户的口头描述、参考资料或对话上下文中生成结构化学习笔记。
-  每条笔记对应一个独立目录，包含 Markdown 文档 + 可运行的最小代码示例。
-  触发条件：用户说「记笔记」「学习笔记」「整理笔记」「记录学习」「take note」「learning note」「summarize what I learned」，
-  或者用户表示刚学完某个东西想要记录下来。
+  从用户的口头描述、参考资料或对话上下文中生成结构化学习笔记。每条笔记对应一个独立目录，包含 Markdown 文档 + 可运行的最小代码示例。
+when_to_use: |
+  当用户说「记笔记」「学习笔记」「整理笔记」「记录学习」「take note」「learning note」「summarize what I learned」，或者用户表示刚学完某个东西想要记录下来时触发。
 argument-hint: "[<topic>] [--dir <path>] [--from <url|file>]"
 disable-model-invocation: false
 ---

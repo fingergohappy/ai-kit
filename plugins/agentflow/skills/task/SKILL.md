@@ -2,10 +2,7 @@
 name: task
 model: opus
 description: |
-  Organize requirements into structured task documents — feature designs, change proposals, or general task descriptions.
-  Two working modes: (1) triggered at conversation start → discussion mode (discuss only, no code);
-  (2) triggered mid-conversation → directly summarize existing discussion into a document. Output to docs/tasks/.
-  Use when discussing new features, code changes, task planning, or when the user says "organize", "summarize", "write a doc", or "generate a task".
+  Organize requirements into structured task documents (feature designs, change proposals, or task descriptions). Outputs to docs/tasks/.
 argument-hint: [任务名称]
 disable-model-invocation: false
 ---

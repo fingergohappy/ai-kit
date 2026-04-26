@@ -1,10 +1,7 @@
 ---
 name: evaluate
 description: |
-  Evidence-based rigorous evaluation.
-  Collects dual-source evidence: project facts (code, deps, config, git history) + external facts (web search for best practices, benchmarks, community consensus).
-  All conclusions must cite sources and show reasoning chain.
-  Use for: tech selection, tool/library evaluation, architecture review, claim verification, code practice assessment, review conclusion verification, security audit.
+  Evidence-based evaluation using dual-source facts: project internals (code, deps, config) and external references (best practices, benchmarks). All conclusions cite sources.
 argument-hint: "<要评估的内容>"
 disable-model-invocation: false
 ---

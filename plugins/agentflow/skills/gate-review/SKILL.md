@@ -2,9 +2,7 @@
 name: gate-review
 model: opus
 description: |
-  Exit gate for the dispatching side. Reviews whether the receiving side's deliverables meet the standard, checking implementation against design documents.
-  Triggered when a message with a [report from ...] tag is received.
-  Also usable for local code self-review: review code against design documents after implementation.
+  Exit gate that reviews deliverables against design documents. Also supports local code self-review after implementation.
 argument-hint: "[<report content or design document path>]"
 context: fork
 disable-model-invocation: false

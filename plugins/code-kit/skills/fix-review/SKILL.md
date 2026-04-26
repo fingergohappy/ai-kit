@@ -1,9 +1,7 @@
 ---
 name: fix-review
 description: |
-  Fix issues found in code review reports and automatically update the report status. Triggered when the user says "fix review", "修这个问题", "处理这条审查意见", "修复审查".
-  Supports locating issues by report path + line number, or by searching with a natural language description.
-  Before fixing, evaluate whether the report's suggestion is reasonable, then formulate a fix plan. After the fix is applied, automatically update the report status from [todo] to [done] and append a fix description.
+  Fix code review report issues and update status from [todo] to [done]. Locates issues by report path, line number, or natural language description.
 argument-hint: "<report-path:line-number | issue-description>"
 disable-model-invocation: false
 ---

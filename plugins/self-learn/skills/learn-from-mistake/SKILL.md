@@ -1,11 +1,7 @@
 ---
 name: learn-from-mistake
 description: |
-  After the AI is corrected by the user, proactively ask whether to solidify the lesson as a guardrail rule.
-  Prerequisite: the AI just made a mistake in the current conversation and was corrected by the user (e.g., "you got this wrong", "that's not right", "incorrect").
-  The AI should proactively suggest after the correction: "Want to solidify this lesson?" and only proceed after the user agrees.
-  The output depends on the nature of the error: generate a new guardrail skill, or append a constraint rule to CLAUDE.md.
-  Do not trigger when: the user is merely discussing errors without targeting the current AI behavior; the user wants to create a new skill unrelated to a mistake (should trigger skill-creator instead).
+  Solidify AI corrections into guardrail rules. Triggers when the user corrects the AI's behavior, generating a new skill or CLAUDE.md rule.
 argument-hint: "[<error description>]"
 disable-model-invocation: false
 ---

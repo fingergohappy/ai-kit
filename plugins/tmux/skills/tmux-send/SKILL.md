@@ -2,9 +2,7 @@
 name: tmux-send
 model: haiku
 description: |
-  Send content to a specified tmux pane and auto-execute. This is the foundational skill for cross-pane communication—use it whenever you need to "throw" content to another pane.
-  When the user says phrases that only specify a numeric target (e.g. "send to 7"), content is extracted from conversation context automatically without follow-up questions.
-  Also triggers on: "send to pane", "run in tmux", "paste to terminal", or any phrase expressing intent to send content/commands/code to a pane.
+  Send content to a tmux pane and auto-execute. Triggers on "send to pane", "run in tmux", or any phrase targeting a specific pane number.
 argument-hint: "[<pane_id>] [<内容>]"
 disable-model-invocation: false
 ---
