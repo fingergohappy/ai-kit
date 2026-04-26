@@ -1,8 +1,7 @@
 ---
 name: gate-review
 model: opus
-description: |
-  Exit gate that reviews deliverables against design documents. Also supports local code self-review after implementation.
+description: Review deliverables against design.
 argument-hint: "[<report content or design document path>]"
 context: fork
 disable-model-invocation: false

@@ -1,9 +1,8 @@
 ---
 name: evaluate
-description: |
-  Evidence-based evaluation using dual-source facts: project internals (code, deps, config) and external references (best practices, benchmarks). All conclusions cite sources.
+description: Dual-source evidence-based evaluation.
 argument-hint: "<要评估的内容>"
-disable-model-invocation: false
+disable-model-invocation: true
 ---
 
 # evaluate

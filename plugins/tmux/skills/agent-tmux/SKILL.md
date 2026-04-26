@@ -1,12 +1,10 @@
 ---
 name: agent-tmux
 model: haiku
-description: |
-  Start, restart, stop, or inspect long-running commands in a shared tmux session.
-  Auto-isolates by project path and git branch to prevent conflicts.
+description: run app use tmux 
 argument-hint: <path> [--cmd <command>]
 context: fork
-disable-model-invocation: false
+disable-model-invocation: true
 ---
 
 # agent-tmux

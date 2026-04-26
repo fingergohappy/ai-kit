@@ -1,10 +1,7 @@
 ---
 name: report
 model: haiku
-description: |
-  Report execution results to the originating pane after a task completes.
-  Use this skill whenever a task finishes, a [task from ...] or [fix from ...] tag
-  is received, or the user says "report".
+description: Report task results to originator.
 argument-hint: "[<target_pane_id>]"
 context: fork
 disable-model-invocation: false

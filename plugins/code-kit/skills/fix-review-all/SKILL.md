@@ -1,9 +1,8 @@
 ---
 name: fix-review-all
-description: |
-  Batch-fix all pending issues from a code review report in parallel. Accepts the report document path as an argument, extracts all [todo] issues, and invokes fix-review via sub-agents in parallel.
+description: Batch-fix all pending review issues.
 argument-hint: "<报告文档路径>"
-disable-model-invocation: false
+disable-model-invocation: true
 ---
 
 # fix-review-all

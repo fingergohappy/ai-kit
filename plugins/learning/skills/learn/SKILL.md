@@ -1,9 +1,8 @@
 ---
 name: learn
-description: |
-  When user wants to understand something quickly, get a minimal example, or simplify existing content. Triggers on "learn", "explain", "give me an example", "simplify", "analogy", or any question where the goal is understanding rather than implementation.
+description: help user understand a concept
 argument-hint: "<topic or question>"
-disable-model-invocation: false
+disable-model-invocation: true
 ---
 
 # learn

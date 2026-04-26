@@ -1,9 +1,8 @@
 ---
 name: fix-review
-description: |
-  Fix code review report issues and update status from [todo] to [done]. Locates issues by report path, line number, or natural language description.
+description: Fix review issues, update status.
 argument-hint: "<report-path:line-number | issue-description>"
-disable-model-invocation: false
+disable-model-invocation: true
 ---
 
 # fix-review

@@ -1,8 +1,7 @@
 ---
 name: task
 model: opus
-description: |
-  Organize requirements into structured task documents (feature designs, change proposals, or task descriptions). Outputs to docs/tasks/.
+description: Organize requirements into task documents.
 argument-hint: [任务名称]
 disable-model-invocation: false
 ---

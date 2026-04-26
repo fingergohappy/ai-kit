@@ -3,7 +3,7 @@ name: take-note
 description: |
   Generate structured learning notes with Markdown docs and runnable code examples. Each note gets its own directory.
 argument-hint: "[<topic>] [--dir <path>] [--from <url|file>]"
-disable-model-invocation: false
+disable-model-invocation: true
 ---
 
 # take-note

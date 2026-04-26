@@ -1,10 +1,7 @@
 ---
 name: dispatch
 model: haiku
-description: |
-  Dispatch design documents or task content to a specified tmux pane for execution.
-  The receiver is instructed to call gate-evaluate for assessment before execution.
-  Triggers when user says "send it over", "dispatch", "let {number} do it", "have {number} handle it", etc.
+description: Dispatch tasks to tmux pane.
 argument-hint: "[loop] [<target_pane_id>] [<文档路径或内联任务>]"
 context: fork
 disable-model-invocation: false

@@ -1,9 +1,8 @@
 ---
 name: review-report
-description: |
-  Generate structured review report from audit results.
+description: Generate structured review report.
 argument-hint: ""
-disable-model-invocation: false
+disable-model-invocation: true
 ---
 
 # review-report

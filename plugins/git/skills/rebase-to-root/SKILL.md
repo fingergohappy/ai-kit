@@ -1,9 +1,8 @@
 ---
 name: rebase-to-root
-description: |
-  Rebase a worktree's feature branch onto the root repository's current branch. Works from within a worktree or from the root.
+description: Rebase worktree branch onto root.
 argument-hint: [feature name, leave empty to auto-detect]
-disable-model-invocation: false
+disable-model-invocation: true
 ---
 
 # rebase-to-root

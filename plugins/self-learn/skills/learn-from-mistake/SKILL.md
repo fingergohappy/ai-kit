@@ -1,9 +1,8 @@
 ---
 name: learn-from-mistake
-description: |
-  Solidify AI corrections into guardrail rules. Triggers when the user corrects the AI's behavior, generating a new skill or CLAUDE.md rule.
+description: learn from a mistake
 argument-hint: "[<error description>]"
-disable-model-invocation: false
+disable-model-invocation: true
 ---
 
 # learn-from-mistake
