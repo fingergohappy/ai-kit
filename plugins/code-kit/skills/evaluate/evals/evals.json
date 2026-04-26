@@ -1,0 +1,23 @@
+{
+  "skill_name": "evaluate",
+  "evals": [
+    {
+      "id": 1,
+      "prompt": "评估下 shellcheck 这个工具，看看值不值得在项目里用",
+      "expected_output": "应该联网搜索 shellcheck 的功能、GitHub 活跃度、社区评价、替代品对比，给出有来源的评估结论",
+      "files": []
+    },
+    {
+      "id": 2,
+      "prompt": "评估下这个说法：Go 的 goroutine 比 Java 的虚拟线程性能更好",
+      "expected_output": "应该搜索 benchmark 数据、技术对比文章、官方文档，区分事实和推断，呈现反面证据",
+      "files": []
+    },
+    {
+      "id": 3,
+      "prompt": "分析下我们在 tmux_send.sh 里用 printf '%s\\n' 代替 echo 处理用户输入这个做法靠不靠谱",
+      "expected_output": "应该搜索 POSIX shell 规范中 echo 和 printf 的行为差异，结合项目源码上下文评估，给出有引用的判断",
+      "files": ["plugins/tmux/skills/tmux-send/scripts/tmux_send.sh"]
+    }
+  ]
+}
