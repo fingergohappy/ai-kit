@@ -1,11 +1,9 @@
 ---
 name: commit
-description: |
-  Create atomic git commits with validation, split suggestions, and conventional commit messages.
-  Triggers when the user says "commit".
+description: commit 
 model: haiku
 context: fork
-argument-hint: [--no-verify]
+argument-hint: "push | --no-verify "
 disable-model-invocation: false
 ---
 
@@ -140,6 +138,12 @@ Report:
 - Number of changed files
 - Whether validation was run or skipped
 
-Suggested next step:
+If `$ARGUMENTS` contains `push`, run:
+
+```bash
+git push
+```
+
+Report the push result. Otherwise, suggest:
 
 - `git push`
