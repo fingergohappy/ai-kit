@@ -1,21 +1,23 @@
 ---
 name: rebase-to-root
-description: Rebase worktree branch onto root.
+description: Move worktree feature commits into root branch.
 argument-hint: [feature name, leave empty to auto-detect]
 disable-model-invocation: true
 ---
 
 # rebase-to-root
 
-Use native git commands to rebase a worktree's feature branch onto the root repository's current branch.
+Incorporate a worktree's feature branch changes into the root repository's current branch using native git commands.
 
+> **Result**: The root branch advances to include all feature branch commits, then the worktree's feature branch fast-forwards to match.
+>
 > **Note**: The root's current branch is not necessarily main — it could be dev, release, or any other branch.
 > The rebase target is always whichever branch the root is checked out on, not a fixed main branch.
 
 ## Key Concepts
 
 - **root**: The main repository directory (where `.git` resides). Can be located from either root or a worktree via the parent directory of `git rev-parse --git-common-dir`.
-- **root branch**: The currently checked-out branch of the root repository, i.e. the target branch for the rebase.
+- **root branch**: The currently checked-out branch of the root repository — the branch that will receive the feature's changes.
 
 ## Prerequisites
 
@@ -66,7 +68,7 @@ Get the rebase target branch:
 git -C "$PROJECT_ROOT" branch --show-current
 ```
 
-Confirm with user: `Rebase <feature-name> onto root branch <root-branch>. Continue?`
+Confirm with user: `Incorporate <feature-name> changes into root branch <root-branch>. Continue?`
 
 Check worktree status:
 
@@ -83,7 +85,7 @@ git -C "<worktree-path>" status --porcelain
 git -C "$PROJECT_ROOT" rebase "<feature-name>"
 ```
 
-This command replays the feature branch's commits onto the root's current branch.
+This rebases the root branch onto the feature branch — the root branch receives all feature's changes.
 
 ### 5. Fast-Forward Worktree Branch
 
@@ -130,3 +132,4 @@ If conflicts occur during rebase:
 - Before rebasing, verify all work is committed to prevent losing changes
 - Do not auto-abort on rebase failure; let the user decide how to proceed
 - If the repository has no worktrees at all, report an error and exit immediately
+
