@@ -1,7 +1,7 @@
 {
   "name": "tmux",
   "version": "1.0.0",
-  "description": "Tmux utilities for sending commands and text across panes",
+  "description": "Tmux utilities for dispatching tasks to agents in other panes and reporting results back",
   "author": {
     "name": "finger",
     "email": "fingergohappy@gmail.com",

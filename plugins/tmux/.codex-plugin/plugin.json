@@ -1,7 +1,7 @@
 {
   "name": "tmux",
   "version": "1.0.0",
-  "description": "Tmux utilities for sending commands and text across panes.",
+  "description": "Tmux utilities for dispatching tasks to agents in other panes and reporting results back.",
   "author": {
     "name": "finger",
     "email": "fingergohappy@gmail.com",
@@ -19,8 +19,8 @@
   "skills": "./skills/",
   "interface": {
     "displayName": "Tmux",
-    "shortDescription": "Send commands or content to other tmux panes.",
-    "longDescription": "Utilities for inter-pane communication in tmux-based workflows, including sending commands and multi-line text to another pane.",
+    "shortDescription": "Dispatch tasks to agents in other tmux panes and report back.",
+    "longDescription": "Utilities for inter-pane agent collaboration in tmux: dispatch a task to an agent in another pane with a reply channel stamped into the message, and report results back to the pane that dispatched it.",
     "developerName": "finger",
     "category": "Developer Tools",
     "capabilities": [
@@ -29,8 +29,8 @@
     ],
     "websiteURL": "https://github.com/fingergohappy/ai-kit",
     "defaultPrompt": [
-      "Use tmux:tmux-send to send this command to tmux pane %7.",
-      "Use tmux:tmux-send to paste a multi-line script into another pane."
+      "Use tmux:tmux_dispatch to send this task to the agent in tmux pane %7.",
+      "Use tmux:tmux_reply to report the result back to the pane that dispatched this task."
     ]
   }
 }

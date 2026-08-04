@@ -1,7 +1,7 @@
 {
   "name": "agentflow",
   "version": "1.0.0",
-  "description": "Agent collaboration flow for task dispatch, evaluation, reporting, and review.",
+  "description": "Agent collaboration gates: task documents, inbound evaluation, and outbound review.",
   "author": {
     "name": "finger",
     "email": "fingergohappy@gmail.com",
@@ -20,8 +20,8 @@
   "skills": "./skills/",
   "interface": {
     "displayName": "Agentflow",
-    "shortDescription": "Coordinate task dispatch, evaluation, reporting, and review.",
-    "longDescription": "Workflow skills for sending tasks to another pane, evaluating inbound work, reporting results, and reviewing deliverables.",
+    "shortDescription": "Task documents, inbound evaluation gate, and outbound review gate.",
+    "longDescription": "Workflow skills for turning requirements into task documents, evaluating inbound work before executing it, and reviewing deliverables against the design. Delivery between panes is handled by the tmux plugin.",
     "developerName": "finger",
     "category": "Productivity",
     "capabilities": [
@@ -31,7 +31,7 @@
     "websiteURL": "https://github.com/fingergohappy/ai-kit",
     "defaultPrompt": [
       "Use agentflow:task to turn this request into a structured task document.",
-      "Use agentflow:dispatch to send this task to another tmux pane.",
+      "Use tmux:tmux_dispatch to send this task to another tmux pane.",
       "Use agentflow:gate-review to review the reported result."
     ]
   }

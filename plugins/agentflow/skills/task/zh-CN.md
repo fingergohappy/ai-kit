@@ -85,5 +85,5 @@ disable-model-invocation: false
 ## Next Steps
 
 文档生成后，用户可以：
-- 调用 dispatch skill 将任务派发给接收端执行
+- 调用 tmux_dispatch skill 将任务派发给接收端执行
 - 调用 gate-review skill 在本地自检代码实现

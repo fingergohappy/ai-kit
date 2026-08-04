@@ -16,7 +16,7 @@ Fix issues from code review reports and keep the report status in sync.
 | Format | Example | Parsing |
 |--------|---------|---------|
 | Report path + line number | `docs/review/2026-04-26_full_review.md:69` | Read content around the specified line and locate the `### #N` issue block |
-| Natural language description | `修复 tmux_send.sh 中变量未加引号的问题` | Search for keyword-matched issues under `docs/review/` |
+| Natural language description | `修复 dispatch.sh 中变量未加引号的问题` | Search for keyword-matched issues under `docs/review/` |
 
 ## Execution Steps
 
@@ -65,7 +65,7 @@ Issue Evaluation:
 Report: docs/review/2026-04-26_full_review.md
 ### #3 [shell] Variable unquoted in here-string
 
-**文件**: `plugins/tmux/skills/tmux-send/scripts/tmux_send.sh:30`
+**文件**: `plugins/tmux/skills/tmux_dispatch/scripts/dispatch.sh:30`
 **问题**: ${BODY} comes from an external file or user-supplied parameter, content is uncontrolled...
 **建议**: Use printf '%s\n' "$BODY" to write to a temp file...
 
@@ -142,7 +142,7 @@ Append a row to the change history table at the end of the report:
 
 ```
 Fixed and report updated:
-- Source file: plugins/tmux/skills/tmux-send/scripts/tmux_send.sh
+- Source file: plugins/tmux/skills/tmux_dispatch/scripts/dispatch.sh
 - Report: docs/review/2026-04-26_full_review.md
 - Status: [todo] → [done]
 ```

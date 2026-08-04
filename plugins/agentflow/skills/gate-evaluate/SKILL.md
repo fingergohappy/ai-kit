@@ -23,7 +23,7 @@ Entry gate for the receiving end. After receiving content from the originating e
 
 ## Evaluation Dimensions
 
-### When receiving an initial task (message contains `[task from ...]`)
+### When receiving an initial task (message contains `[dispatched from tmux pane %N, mode: task]`)
 
 Check the task content item by item:
 
@@ -34,7 +34,7 @@ Check the task content item by item:
 | Scope | Is it asking to modify things it should not modify; is the scope reasonable |
 | Feasibility | Are dependencies met; is it technically achievable |
 
-### When receiving a fix instruction (message contains `[fix from ...]`)
+### When receiving a fix instruction (message contains `[dispatched from tmux pane %N, mode: fix]`)
 
 Verify each issue item by item:
 
@@ -87,5 +87,5 @@ The main agent decides based on the evaluation conclusion:
 | Overall verdict | Action |
 |----------------|--------|
 | All reasonable | Execute all tasks normally |
-| Partially unreasonable | Skip unreasonable items, execute the rest, explain skip reasons in the report skill |
-| Entirely unreasonable | Do not execute; directly invoke the report skill to send rejection reasons back to the originating end |
+| Partially unreasonable | Skip unreasonable items, execute the rest, explain skip reasons in the tmux_reply skill |
+| Entirely unreasonable | Do not execute; directly invoke the tmux_reply skill to send rejection reasons back to the originating end |

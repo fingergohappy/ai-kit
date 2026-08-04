@@ -82,5 +82,5 @@ If triggered mid-conversation (when there is already discussion content):
 ## Follow-Up Workflow
 
 After the document is generated, the user can:
-- Call the dispatch skill to assign the task to a receiving end for execution
+- Call the tmux_dispatch skill to assign the task to a receiving end for execution
 - Call the gate-review skill to self-review code implementation locally

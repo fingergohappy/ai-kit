@@ -19,7 +19,7 @@ disable-model-invocation: false
 | 形式 | 示例 | 解析方式 |
 |------|------|---------|
 | 报告路径+行号 | `docs/review/2026-04-26_full_review.md:69` | 读取指定行附近内容，定位 `### #N` 问题块 |
-| 一句话描述 | `修复 tmux_send.sh 中变量未加引号的问题` | 在 `docs/review/` 下搜索关键词匹配的问题 |
+| 一句话描述 | `修复 dispatch.sh 中变量未加引号的问题` | 在 `docs/review/` 下搜索关键词匹配的问题 |
 
 ## Execution Steps
 
@@ -68,7 +68,7 @@ disable-model-invocation: false
 报告: docs/review/2026-04-26_full_review.md
 ### #3 [shell] here-string 中变量未加引号
 
-**文件**: `plugins/tmux/skills/tmux-send/scripts/tmux_send.sh:30`
+**文件**: `plugins/tmux/skills/tmux_dispatch/scripts/dispatch.sh:30`
 **问题**: ${BODY} 来自外部文件或用户传入参数，内容不受控...
 **建议**: 通过 printf '%s\n' "$BODY" 写入临时文件...
 
@@ -145,7 +145,7 @@ issue_stats:
 
 ```
 已修复并更新报告：
-- 源文件: plugins/tmux/skills/tmux-send/scripts/tmux_send.sh
+- 源文件: plugins/tmux/skills/tmux_dispatch/scripts/dispatch.sh
 - 报告: docs/review/2026-04-26_full_review.md
 - 状态: [todo] → [done]
 ```

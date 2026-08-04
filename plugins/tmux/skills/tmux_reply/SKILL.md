@@ -12,7 +12,9 @@ Why this needs saying at all: the dispatcher deliberately does not watch you. It
 
 ## Find the dispatcher's pane id
 
-It's in the stamp on the task you received: `[dispatched from tmux pane %5. When you finish, ...]`. That `%5` is the target — look back at the message that started this work rather than guessing from the current tmux layout.
+It's in the stamp on the task you received: `[dispatched from tmux pane %5, loop: false. When you finish, ...]`. That `%5` is the target — look back at the message that started this work rather than guessing from the current tmux layout.
+
+Note the `loop` value in the same stamp: if it says `loop: true`, pass `--loop` when you send (see below). That flag is what tells the dispatcher's `gate-review` it may send fixes back without stopping to ask, and the stamp is the only place it survives the trip — drop it and an unattended loop silently turns into one that waits for a human.
 
 If the task carried no stamp, it wasn't dispatched and there is nobody expecting a report; just answer the user normally. If you're sure a report is wanted but can't find the pane id, ask in plain prose — don't list panes and don't send to a pane you inferred, since a report landing in a stranger's session is worse than a report that arrives late.
 
@@ -40,14 +42,25 @@ DONE: 修好了 verifyToken 的毫秒/秒比较问题。
 
 Keep it to what the dispatcher needs in order to act. A full narrative of your debugging costs it a re-read and adds nothing it can use.
 
+## Script paths
+
+All `scripts/` paths are relative to **the directory containing this SKILL.md file**. Resolve to an absolute path before running anything, since the plugin may be installed under a cache directory rather than the repo:
+
+```bash
+SKILL_DIR="<absolute path of the directory holding this SKILL.md>"
+```
+
 ## Send it
 
 ```bash
 # Short report, passed inline
-bash ~/.claude/skills/tmux_reply/scripts/reply.sh "<pane_id>" "<message>"
+bash "$SKILL_DIR/scripts/reply.sh" "<pane_id>" "<message>"
 
 # Longer or multi-line report — write it to a file first, pass the path
-bash ~/.claude/skills/tmux_reply/scripts/reply.sh "<pane_id>" "/tmp/reply.txt"
+bash "$SKILL_DIR/scripts/reply.sh" "<pane_id>" "/tmp/reply.txt"
+
+# The task you received was stamped loop: true — echo it back
+bash "$SKILL_DIR/scripts/reply.sh" "<pane_id>" "/tmp/reply.txt" --loop
 ```
 
 Use the file form as soon as the report is multi-line or contains backticks or quotes — shell quoting mangles reports quietly, and a garbled report is worse than none.

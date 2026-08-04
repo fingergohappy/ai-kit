@@ -17,12 +17,12 @@ Exit gate for the dispatching side. Reviews whether deliverables meet the standa
 
 1. Obtain the content to review from conversation context or `$ARGUMENTS`
 2. Locate the original task/design document (to compare against)
-3. Extract the `loop` field from the tag (`[report from ..., loop: true/false]`)
+3. Extract the `loop` field from the tag (`[reply from tmux pane %N, loop: true/false]`)
    - If no loop field is present in the tag, default to `false`
 4. Review item by item
 5. Output the review conclusion
 6. Decide the next step based on the conclusion and the loop field:
-   - `loop: true` + fixes needed → automatically call `/dispatch` to send fix instructions (redo)
+   - `loop: true` + fixes needed → automatically call `tmux_dispatch` to send fix instructions (redo)
    - `loop: false` + fixes needed → output the conclusion and stop, do not automatically initiate fixes
    - Passed → mark as complete (regardless of loop value)
 
@@ -30,7 +30,7 @@ Exit gate for the dispatching side. Reviews whether deliverables meet the standa
 
 ### Scenario A: Cross-Agent Review (received report)
 
-After receiving execution results reported by the receiving side via the report skill, review the deliverables.
+After receiving execution results reported by the receiving side via the tmux_reply skill, review the deliverables.
 
 Extract from the report message:
 - The "original task" section to recover the original design
@@ -107,9 +107,11 @@ Behavior depends on the review conclusion and the loop tag:
 | Conclusion | Behavior |
 |------------|----------|
 | Passed | Mark as complete, document status → done |
-| Fixes needed | Automatically call `/dispatch` to send the issue list and fix suggestions back to the receiving side (redo) |
+| Fixes needed | Automatically call `tmux_dispatch` to send the issue list and fix suggestions back to the receiving side (redo) |
 | Receiving side's rejection is justified | Accept the rejection, adjust the task or mark as complete |
-| Receiving side's rejection is unjustified | Automatically call `/dispatch` to resend, with rebuttal explanation |
+| Receiving side's rejection is unjustified | Automatically call `tmux_dispatch` to resend, with rebuttal explanation |
+
+When redispatching, pass both flags: `dispatch.sh <pane_id> <file> --loop --fix`. `--fix` is what makes the receiving side's `gate-evaluate` verify each reported issue instead of re-judging the task from scratch, and `--loop` keeps the next round unattended. Drop either one and the loop quietly degrades — without `--fix` the fix list gets evaluated as if it were a fresh task, and without `--loop` the cycle stops at the next report to wait for a human.
 
 ### loop: false (non-loop mode)
 

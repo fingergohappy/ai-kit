@@ -39,11 +39,11 @@ After installation, restart Claude Code. Skills will be available with the plugi
 
 ```
 /agentflow:task login-system
-/agentflow:dispatch %7 docs/tasks/login_feature.md
+/tmux:tmux_dispatch %7 docs/tasks/login_feature.md
 /code-kit:evaluate "use postgres vs mysql"
 /learning:learn rust lifetimes
 /git:commit
-/tmux:tmux-send %7 "hello"
+/tmux:tmux_reply %5 "DONE: login feature implemented"
 ```
 
 <details>
@@ -81,14 +81,12 @@ Detailed guide:
 
 ### agentflow
 
-Agent collaboration loop: task → dispatch → evaluate → report → review → redo.
+Agent collaboration loop: task → dispatch → evaluate → report → review → redo. The dispatch and report legs are provided by the `tmux` plugin (`tmux_dispatch` / `tmux_reply`).
 
 | Skill | Purpose |
 |-------|---------|
 | `agentflow:task` | Generate structured task documents (feature / change / task) |
-| `agentflow:dispatch` | Send task or fix instructions to a tmux pane for execution |
 | `agentflow:gate-evaluate` | Receiver-side input guard — evaluate incoming tasks before execution |
-| `agentflow:report` | Report execution results back to the sender |
 | `agentflow:gate-review` | Sender-side output guard — review work results, decide pass or redo |
 
 ### code-kit
@@ -127,7 +125,8 @@ Tmux infrastructure utilities for inter-pane communication and long-running serv
 
 | Skill | Purpose |
 |-------|---------|
-| `tmux:tmux-send` | Send text content to a tmux pane |
+| `tmux:tmux_dispatch` | Dispatch a task to an agent in another pane, stamping a reply channel |
+| `tmux:tmux_reply` | Report back to the pane that dispatched the task |
 | `tmux:agent-tmux` | Start/restart/stop long-running commands in shared tmux session (auto-isolates by project/branch) |
 
 ### git
@@ -154,17 +153,17 @@ Enter design discussion mode — discuss without writing code, generate document
 #### 2. Dispatch Phase
 
 ```
-/agentflow:dispatch [loop] <pane_id> <doc-path>
+/tmux:tmux_dispatch <pane_id> <doc-path> [--loop]
 ```
 
-Send the task document to another agent's tmux pane. The receiving agent gets a `[task from ...]` labeled message. Add `loop` to enable automatic review-fix cycling.
+Send the task document to another agent's tmux pane. The receiving agent gets a message stamped `[dispatched from tmux pane %N, mode: task, loop: ...]`. Add `--loop` to enable automatic review-fix cycling.
 
 #### 3. Execution & Report
 
-The receiver evaluates the task via `gate-evaluate`, executes, then calls `report` to send results back:
+The receiver evaluates the task via `gate-evaluate`, executes, then calls `tmux_reply` to send results back:
 
 ```
-[report from Claude Code, pane_id: %5, loop: true: completed 3 tasks]
+[reply from tmux pane %9, loop: true, re: the task you dispatched]
 ```
 
 #### 4. Review & Fix
@@ -172,7 +171,7 @@ The receiver evaluates the task via `gate-evaluate`, executes, then calls `repor
 The sender receives the report and `gate-review` triggers:
 
 - Reviews work against original design
-- If `loop: true` + issues found → auto-dispatches fix instructions (up to 3 rounds)
+- If `loop: true` + issues found → auto-dispatches fix instructions with `--fix --loop` (up to 3 rounds)
 - If `loop: false` + issues found → outputs conclusions, user decides next step
 - If all passed → done
 
@@ -213,31 +212,27 @@ Collects dual-source evidence (project facts + external best practices) and prod
 
 ## Message Protocol
 
-### Task Dispatch
+### Dispatch (task or fix)
 
 ```
-[task from {agent-name}, pane_id: {pane_id}, loop: {true|false}: {task-summary}]
+[dispatched from tmux pane {pane_id}, mode: {task|fix}, loop: {true|false}. When you finish, get blocked, or need a decision, notify {pane_id} using your tmux_reply skill, and carry loop: {true|false} back in that reply.]
 ```
 
-### Fix Dispatch
-
-```
-[fix from {agent-name}, pane_id: {pane_id}, loop: {true|false}: {fix-summary}]
-```
+`mode: task` is a first-time task. `mode: fix` is a fix instruction from `gate-review`, which the receiver's `gate-evaluate` verifies issue by issue instead of re-judging the task from scratch.
 
 ### Execution Report
 
 ```
-[report from {agent-name}, pane_id: {pane_id}, loop: {true|false}: {result-summary}]
+[reply from tmux pane {pane_id}, loop: {true|false}, re: the task you dispatched]
 ```
 
-Agents use these tags to identify message types and route responses correctly.
+Stamps are appended by `tmux_dispatch` / `tmux_reply`, not hand-written. `loop` has to survive the round trip: `gate-review` reads it off the incoming report to decide whether it may redispatch fixes on its own, so a report that drops it silently turns an unattended loop into one that waits for a human.
 
 ## Requirements
 
 - tmux session with multiple panes
 - AI coding tool running in each pane (Claude Code, Codex, OpenCode, etc.)
-- `tmux:tmux-send` skill available for inter-pane communication
+- `tmux:tmux_dispatch` and `tmux:tmux_reply` skills available for inter-pane communication
 
 ## License
 

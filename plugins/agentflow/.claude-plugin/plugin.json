@@ -1,7 +1,7 @@
 {
   "name": "agentflow",
   "version": "1.0.0",
-  "description": "Agent collaboration flow: task → dispatch → evaluate → report → review → redo",
+  "description": "Agent collaboration gates: task documents, inbound evaluation, outbound review (delivery via the tmux plugin)",
   "author": {
     "name": "finger",
     "email": "fingergohappy@gmail.com",

@@ -62,7 +62,12 @@ bash "$SKILL_DIR/scripts/dispatch.sh" "<pane_id>" "<task>"
 
 # Longer or multi-line task — write it to a file first, pass the path
 bash "$SKILL_DIR/scripts/dispatch.sh" "<pane_id>" "/tmp/task.txt"
+
+# Review-fix loop: gate-review may redispatch fixes on its own instead of stopping to ask
+bash "$SKILL_DIR/scripts/dispatch.sh" "<pane_id>" "/tmp/task.txt" --loop
 ```
+
+Pass `--loop` only when the user wants the review-fix cycle to run unattended — it is what licenses `gate-review` to send fixes back without checking in first. Leave it off by default, since a wrong automatic redispatch costs more than a question. The flag travels in the stamp and the receiving agent echoes it back in its reply, which is the only way it survives the round trip.
 
 Prefer the file form as soon as the task has multiple lines, backticks, or quotes. It sidesteps shell quoting entirely, and a mangled brief is much harder to notice than a failed command.
 

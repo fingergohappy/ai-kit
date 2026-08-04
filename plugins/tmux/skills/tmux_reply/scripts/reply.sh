@@ -1,13 +1,17 @@
 #!/usr/bin/env bash
 # reply.sh - Report back to the tmux pane that dispatched a task to you.
-# Usage: reply.sh <pane_id> <message_or_file>
+# Usage: reply.sh <pane_id> <message_or_file> [--loop]
 #   pane_id          %5 | 5 | session:window.pane  (the dispatcher's pane)
 #   message_or_file  literal report text, or a path starting with / or ./ to read it from
+#   --loop           pass this when the task you received was stamped loop: true,
+#                    so the dispatcher's gate-review knows it may redispatch fixes
 
 set -euo pipefail
 
-TARGET_ARG="${1:?Usage: reply.sh <pane_id> <message_or_file>}"
-MSG="${2:?Usage: reply.sh <pane_id> <message_or_file>}"
+TARGET_ARG="${1:?Usage: reply.sh <pane_id> <message_or_file> [--loop]}"
+MSG="${2:?Usage: reply.sh <pane_id> <message_or_file> [--loop]}"
+LOOP="false"
+[[ "${3:-}" == "--loop" ]] && LOOP="true"
 
 # A bare number is shorthand for a pane id; anything else (%5, dev:1.2) passes through.
 if [[ "$TARGET_ARG" =~ ^[0-9]+$ ]]; then
@@ -50,9 +54,9 @@ fi
 # dispatcher's pane treats any incoming message as a fresh turn, so an invitation
 # to respond would set two agents acknowledging each other indefinitely.
 if [[ -n "$SENDER" ]]; then
-  FOOTER="[reply from tmux pane ${SENDER}, re: the task you dispatched]"
+  FOOTER="[reply from tmux pane ${SENDER}, loop: ${LOOP}, re: the task you dispatched]"
 else
-  FOOTER="[reply from a dispatched agent]"
+  FOOTER="[reply from a dispatched agent, loop: ${LOOP}]"
 fi
 
 # Bracketed paste (-p) keeps a multi-line report intact; without it every newline

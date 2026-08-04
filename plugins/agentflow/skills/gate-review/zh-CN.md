@@ -3,7 +3,7 @@ name: gate-review
 description: |
   派发端出口守卫，对照设计文档审查交付物。也支持本地代码实现后的自审。
 when_to_use: |
-  当用户说「审查下」「review」「看看做得怎么样」「检查结果」时触发。收到带有 [report from ...] 标签的消息时自动触发。
+  当用户说「审查下」「review」「看看做得怎么样」「检查结果」时触发。收到带有 [reply from tmux pane %N] 标签的消息时自动触发。
 argument-hint: "[<汇报内容或设计文档路径>]"
 model: opus
 context: fork
@@ -20,12 +20,12 @@ disable-model-invocation: false
 
 1. 从对话上下文或 `$ARGUMENTS` 获取待审查的内容
 2. 找到原始任务/设计文档（用于对照）
-3. 从标签中提取 `loop` 字段（`[report from ..., loop: true/false]`）
+3. 从标签中提取 `loop` 字段（`[reply from tmux pane %N, loop: true/false]`）
    - 如果标签中没有 loop 字段，默认为 `false`
 4. 逐条审查
 5. 输出审查结论
 6. 根据结论和 loop 字段决定下一步：
-   - `loop: true` + 需修复 → 自动调用 `/dispatch` 发送修复指令（redo）
+   - `loop: true` + 需修复 → 自动调用 `tmux_dispatch` 发送修复指令（redo）
    - `loop: false` + 需修复 → 输出结论就结束，不自动发起修复
    - 通过 → 标记完成（无论 loop 值）
 
@@ -33,7 +33,7 @@ disable-model-invocation: false
 
 ### 场景 A: Cross-agent Review
 
-收到接收端通过 report skill 汇报的执行结果后，审查工作成果。
+收到接收端通过 tmux_reply skill 汇报的执行结果后，审查工作成果。
 
 从汇报消息中提取：
 - 「原始任务」部分找回原始设计
@@ -110,9 +110,11 @@ CRITICAL 意味着必须修复。
 | 结论 | 行为 |
 |------|------|
 | 通过 | 标记完成，文档 status → done |
-| 需修复 | 自动调用 `/dispatch` 将问题列表和修复建议发回接收端（redo） |
+| 需修复 | 自动调用 `tmux_dispatch` 将问题列表和修复建议发回接收端（redo） |
 | 接收端拒绝有理 | 接受拒绝，调整任务或标记完成 |
-| 接收端拒绝无理 | 自动调用 `/dispatch` 重新发送，附上反驳说明 |
+| 接收端拒绝无理 | 自动调用 `tmux_dispatch` 重新发送，附上反驳说明 |
+
+重派时两个 flag 都要带：`dispatch.sh <pane_id> <文件> --loop --fix`。`--fix` 是让接收端的 `gate-evaluate` 去逐条核验你报的问题，而不是把修复清单当成一个全新任务重新评估合理性；`--loop` 是让下一轮继续无人值守。少任何一个，循环都会无声降级——没有 `--fix`，修复清单会被当新任务评估；没有 `--loop`，流程会在下一次回报处停下来等人。
 
 ### loop: false（非循环模式）
 
