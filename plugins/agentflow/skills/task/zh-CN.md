@@ -78,7 +78,7 @@ disable-model-invocation: false
   - 跳过：`- [skip] 任务描述 — 原因`
 - 模板占位符 `{xxx}` 必须全部替换，不能残留
 - 代码示例用项目实际语言
-- 文件路径必须反映实际代码路径，方便后续用 gate-review skill 对照
+- 文件路径必须反映实际代码路径，方便后续审查时对照
 - 对话中未涉及的内容，根据已有代码上下文推断补充
 - 如果某个 section 确实无法填充，保留标题并注明原因（"待讨论" 或 "待确认"）
 
@@ -86,4 +86,4 @@ disable-model-invocation: false
 
 文档生成后，用户可以：
 - 调用 tmux_dispatch skill 将任务派发给接收端执行
-- 调用 gate-review skill 在本地自检代码实现
+- 交付前先对照本文档自检代码实现

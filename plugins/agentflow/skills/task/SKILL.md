@@ -75,7 +75,7 @@ If triggered mid-conversation (when there is already discussion content):
   - Skipped: `- [skip] task description — reason`
 - Template placeholders `{xxx}` must all be replaced; none should remain
 - Code examples should use the project's actual language
-- File paths must reflect actual code paths, making it easy to cross-reference later with the gate-review skill
+- File paths must reflect actual code paths, making it easy to cross-reference later during review
 - For topics not covered in the conversation, infer and supplement based on existing code context
 - If a section truly cannot be filled, keep the heading and note the reason ("待讨论" or "待确认", i.e., "to be discussed" or "to be confirmed")
 
@@ -83,4 +83,4 @@ If triggered mid-conversation (when there is already discussion content):
 
 After the document is generated, the user can:
 - Call the tmux_dispatch skill to assign the task to a receiving end for execution
-- Call the gate-review skill to self-review code implementation locally
+- Self-review the code implementation against this document before handing it off

@@ -32,7 +32,7 @@
     "defaultPrompt": [
       "Use agentflow:task to turn this request into a structured task document.",
       "Use tmux:tmux_dispatch to send this task to another tmux pane.",
-      "Use agentflow:gate-review to review the reported result."
+      "Use agentflow:gate-evaluate to sanity-check this inbound task before executing it."
     ]
   }
 }

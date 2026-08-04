@@ -87,7 +87,6 @@ Agent collaboration loop: task → dispatch → evaluate → report → review �
 |-------|---------|
 | `agentflow:task` | Generate structured task documents (feature / change / task) |
 | `agentflow:gate-evaluate` | Receiver-side input guard — evaluate incoming tasks before execution |
-| `agentflow:gate-review` | Sender-side output guard — review work results, decide pass or redo |
 
 ### code-kit
 
@@ -166,13 +165,9 @@ The receiver evaluates the task via `gate-evaluate`, executes, then calls `tmux_
 [reply from tmux pane %9, re: the task you dispatched]
 ```
 
-#### 4. Review & Fix
+#### 4. Review
 
-The sender receives the report and `gate-review` triggers:
-
-- Reviews work against original design
-- If issues found → outputs the issue list and fix suggestions; the user decides whether to send them back (up to 3 rounds if they ask for unattended cycling)
-- If all passed → done
+The sender reads the report and checks the deliverable against the original task document. Treat the report as a claim to verify rather than a result to accept -- if it does not hold up, dispatch a follow-up task naming the specific issues.
 
 ### Code Review (code-kit)
 
