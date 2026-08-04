@@ -64,12 +64,7 @@ bash "$SKILL_DIR/scripts/dispatch.sh" "<pane_id>" "<任务>"
 
 # 长任务或多行 —— 先写文件，传路径
 bash "$SKILL_DIR/scripts/dispatch.sh" "<pane_id>" "/tmp/task.txt"
-
-# 审查-修复循环：gate-review 可以自行重派修复，不用停下来问
-bash "$SKILL_DIR/scripts/dispatch.sh" "<pane_id>" "/tmp/task.txt" --loop
 ```
-
-只有用户希望审查-修复循环无人值守时才加 `--loop`——它就是授权 `gate-review` 不先请示就把修复任务发回去的那把钥匙。默认不加，因为一次错误的自动重派比问一句代价大得多。这个标志随戳一起传过去，由接收方在回报里带回来，这是它唯一能活过一个来回的方式。
 
 任务一旦是多行、含反引号或引号，就优先用文件形式。它彻底绕开 shell 转义问题，而一份被转义搞乱的任务书远比一条报错的命令难被发现。
 

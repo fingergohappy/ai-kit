@@ -17,14 +17,11 @@ Exit gate for the dispatching side. Reviews whether deliverables meet the standa
 
 1. Obtain the content to review from conversation context or `$ARGUMENTS`
 2. Locate the original task/design document (to compare against)
-3. Extract the `loop` field from the tag (`[reply from tmux pane %N, loop: true/false]`)
-   - If no loop field is present in the tag, default to `false`
-4. Review item by item
-5. Output the review conclusion
-6. Decide the next step based on the conclusion and the loop field:
-   - `loop: true` + fixes needed → automatically call `tmux_dispatch` to send fix instructions (redo)
-   - `loop: false` + fixes needed → output the conclusion and stop, do not automatically initiate fixes
-   - Passed → mark as complete (regardless of loop value)
+3. Review item by item
+4. Output the review conclusion
+5. Decide the next step:
+   - Fixes needed → output the issue list and fix suggestions, and let the user decide whether to send them back. Redispatch on your own only if the user has already asked you to keep cycling without checking in.
+   - Passed → mark as complete
 
 ## Trigger Scenarios
 
@@ -100,31 +97,18 @@ After the review is complete, output the conclusion in this format:
 
 ## Behavior After Review
 
-Behavior depends on the review conclusion and the loop tag:
-
-### loop: true (loop mode)
-
 | Conclusion | Behavior |
 |------------|----------|
 | Passed | Mark as complete, document status → done |
-| Fixes needed | Automatically call `tmux_dispatch` to send the issue list and fix suggestions back to the receiving side (redo) |
+| Fixes needed | Output the issue list and fix suggestions; let the user decide whether to send them back |
 | Receiving side's rejection is justified | Accept the rejection, adjust the task or mark as complete |
-| Receiving side's rejection is unjustified | Automatically call `tmux_dispatch` to resend, with rebuttal explanation |
+| Receiving side's rejection is unjustified | Inform the user, who decides whether to resend with a rebuttal |
 
-When redispatching, pass both flags: `dispatch.sh <pane_id> <file> --loop --fix`. `--fix` is what makes the receiving side's `gate-evaluate` verify each reported issue instead of re-judging the task from scratch, and `--loop` keeps the next round unattended. Drop either one and the loop quietly degrades — without `--fix` the fix list gets evaluated as if it were a fresh task, and without `--loop` the cycle stops at the next report to wait for a human.
-
-### loop: false (non-loop mode)
-
-| Conclusion | Behavior |
-|------------|----------|
-| Passed | Mark as complete, document status → done |
-| Fixes needed | Output the issue list and fix suggestions, **do not automatically initiate fixes**; let the user decide the next step |
-| Receiving side's rejection is justified | Accept the rejection, inform the user |
-| Receiving side's rejection is unjustified | Inform the user, let the user decide whether to redispatch |
+Default to handing the decision back rather than redispatching on your own. A wrong automatic redo spends another full round of the other agent's work and can bury the original deliverable under changes nobody asked for, while asking costs one line. Redispatch directly with `tmux_dispatch` only when the user has already said to keep cycling without checking in.
 
 ## Termination Conditions
 
-Stop the loop when any of the following conditions is met:
+Stop cycling when any of the following conditions is met:
 
 - Review passes completely (no CRITICAL/HIGH issues)
 - Only MEDIUM/LOW issues remain

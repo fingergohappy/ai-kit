@@ -153,17 +153,17 @@ Enter design discussion mode — discuss without writing code, generate document
 #### 2. Dispatch Phase
 
 ```
-/tmux:tmux_dispatch <pane_id> <doc-path> [--loop]
+/tmux:tmux_dispatch <pane_id> <doc-path>
 ```
 
-Send the task document to another agent's tmux pane. The receiving agent gets a message stamped `[dispatched from tmux pane %N, mode: task, loop: ...]`. Add `--loop` to enable automatic review-fix cycling.
+Send the task document to another agent's tmux pane. The receiving agent gets a message stamped `[dispatched from tmux pane %N. ...]`, which tells it where to report back to.
 
 #### 3. Execution & Report
 
 The receiver evaluates the task via `gate-evaluate`, executes, then calls `tmux_reply` to send results back:
 
 ```
-[reply from tmux pane %9, loop: true, re: the task you dispatched]
+[reply from tmux pane %9, re: the task you dispatched]
 ```
 
 #### 4. Review & Fix
@@ -171,8 +171,7 @@ The receiver evaluates the task via `gate-evaluate`, executes, then calls `tmux_
 The sender receives the report and `gate-review` triggers:
 
 - Reviews work against original design
-- If `loop: true` + issues found → auto-dispatches fix instructions with `--fix --loop` (up to 3 rounds)
-- If `loop: false` + issues found → outputs conclusions, user decides next step
+- If issues found → outputs the issue list and fix suggestions; the user decides whether to send them back (up to 3 rounds if they ask for unattended cycling)
 - If all passed → done
 
 ### Code Review (code-kit)
@@ -212,21 +211,19 @@ Collects dual-source evidence (project facts + external best practices) and prod
 
 ## Message Protocol
 
-### Dispatch (task or fix)
+### Task Dispatch
 
 ```
-[dispatched from tmux pane {pane_id}, mode: {task|fix}, loop: {true|false}. When you finish, get blocked, or need a decision, notify {pane_id} using your tmux_reply skill, and carry loop: {true|false} back in that reply.]
+[dispatched from tmux pane {pane_id}. When you finish, get blocked, or need a decision, notify {pane_id} using your tmux_reply skill.]
 ```
-
-`mode: task` is a first-time task. `mode: fix` is a fix instruction from `gate-review`, which the receiver's `gate-evaluate` verifies issue by issue instead of re-judging the task from scratch.
 
 ### Execution Report
 
 ```
-[reply from tmux pane {pane_id}, loop: {true|false}, re: the task you dispatched]
+[reply from tmux pane {pane_id}, re: the task you dispatched]
 ```
 
-Stamps are appended by `tmux_dispatch` / `tmux_reply`, not hand-written. `loop` has to survive the round trip: `gate-review` reads it off the incoming report to decide whether it may redispatch fixes on its own, so a report that drops it silently turns an unattended loop into one that waits for a human.
+Stamps are appended by `tmux_dispatch` / `tmux_reply`, not hand-written. The dispatch stamp is what makes the reply possible at all: it is the only place the receiving agent learns which pane to report back to.
 
 ## Requirements
 

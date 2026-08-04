@@ -1,7 +1,7 @@
 ---
 name: tmux_reply
 description: |
-  向派活给你的那个 tmux pane 回报结果。当你手上的任务是从别的 pane 派过来的（消息里带着 `[dispatched from tmux pane %5, loop: ...]` 这样的戳），而你现在做完了、卡住了、或者需要派发方拍板时，主动使用——不用等人再问一遍。用户说「通知 5」「告诉派活给我那个 pane」「回报一下进展」「跟 %3 说我做完了」时同样触发。这是 tmux_dispatch 的返回半程：派发方从不轮询你，报告不发出去就等于没人知道这活干过。
+  向派活给你的那个 tmux pane 回报结果。当你手上的任务是从别的 pane 派过来的（消息里带着 `[dispatched from tmux pane %5]` 这样的戳），而你现在做完了、卡住了、或者需要派发方拍板时，主动使用——不用等人再问一遍。用户说「通知 5」「告诉派活给我那个 pane」「回报一下进展」「跟 %3 说我做完了」时同样触发。这是 tmux_dispatch 的返回半程：派发方从不轮询你，报告不发出去就等于没人知道这活干过。
 when_to_use: |
   当前任务带着 `[dispatched from tmux pane %N]` 戳且已完成或卡住时触发；或用户说「通知 {number}」「回报给 {number}」「告诉那个派活的 pane」「跟 {number} 说我做完了」时触发。
 argument-hint: "[<pane_id>] [<消息>]"
@@ -16,9 +16,7 @@ disable-model-invocation: false
 
 ## 找到派发方的 pane id
 
-它就在你收到的任务的戳里：`[dispatched from tmux pane %5, loop: false. When you finish, ...]`。那个 `%5` 就是目标——回头看启动这项工作的那条消息，不要从当前 tmux 布局里猜。
-
-留意同一个戳里的 `loop` 值：如果是 `loop: true`，发送时要加 `--loop`（见下）。这个标志是在告诉派发方的 `gate-review`「可以不请示就把修复发回来」，而戳是它唯一能活过这趟往返的地方——丢了它，一个本该无人值守的循环就会悄无声息地变成等人的循环。
+它就在你收到的任务的戳里：`[dispatched from tmux pane %5. When you finish, ...]`。那个 `%5` 就是目标——回头看启动这项工作的那条消息，不要从当前 tmux 布局里猜。
 
 如果任务上没有戳，那它不是派发来的，没人在等报告，正常回答用户就好。如果你确信需要回报但找不到 pane id，用纯文本询问——不要列 pane 清单，也不要发给一个你推断出来的 pane，报告落进陌生人的 session 比迟到更糟。
 
@@ -62,9 +60,6 @@ bash "$SKILL_DIR/scripts/reply.sh" "<pane_id>" "<消息>"
 
 # 长报告或多行 —— 先写文件，传路径
 bash "$SKILL_DIR/scripts/reply.sh" "<pane_id>" "/tmp/reply.txt"
-
-# 收到的任务戳着 loop: true —— 原样带回去
-bash "$SKILL_DIR/scripts/reply.sh" "<pane_id>" "/tmp/reply.txt" --loop
 ```
 
 报告一旦是多行、含反引号或引号，就用文件形式——shell 转义会静默弄乱报告，而一份乱码报告比没有报告更糟。

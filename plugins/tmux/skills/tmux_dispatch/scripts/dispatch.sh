@@ -1,27 +1,13 @@
 #!/usr/bin/env bash
 # dispatch.sh - Hand a task to an agent running in another tmux pane.
-# Usage: dispatch.sh <pane_id> <task_or_file> [--loop] [--fix]
+# Usage: dispatch.sh <pane_id> <task_or_file>
 #   pane_id      %7 | 7 | session:window.pane
 #   task_or_file literal task text, or a path starting with / or ./ to read it from
-#   --loop       mark this as a review-fix loop, so the dispatcher's gate-review
-#                may redispatch fixes automatically instead of stopping to ask
-#   --fix        this is a fix instruction, not a first-time task; gate-evaluate on
-#                the receiving side verifies each reported issue rather than judging
-#                whether the task is reasonable
 
 set -euo pipefail
 
-TARGET_ARG="${1:?Usage: dispatch.sh <pane_id> <task_or_file> [--loop] [--fix]}"
-TASK="${2:?Usage: dispatch.sh <pane_id> <task_or_file> [--loop] [--fix]}"
-LOOP="false"
-MODE="task"
-for flag in "${@:3}"; do
-  case "$flag" in
-    --loop) LOOP="true" ;;
-    --fix)  MODE="fix" ;;
-    *) echo "Error: unknown flag '$flag' (expected --loop or --fix)" >&2; exit 1 ;;
-  esac
-done
+TARGET_ARG="${1:?Usage: dispatch.sh <pane_id> <task_or_file>}"
+TASK="${2:?Usage: dispatch.sh <pane_id> <task_or_file>}"
 
 # A bare number is shorthand for a pane id; anything else (%7, dev:1.2) passes through.
 if [[ "$TARGET_ARG" =~ ^[0-9]+$ ]]; then
@@ -59,12 +45,9 @@ fi
 
 # The stamp is the whole point of dispatch rather than a plain send: it tells the
 # receiving agent where the task came from, so it can report back on its own
-# instead of leaving the dispatcher to poll. It also asks for loop to be echoed
-# back, because gate-review on this side reads it off the incoming report to
-# decide whether it may redispatch fixes on its own -- and the stamp is the only
-# place that information survives the trip.
+# instead of leaving the dispatcher to poll.
 if [[ -n "$SENDER" ]]; then
-  FOOTER="[dispatched from tmux pane ${SENDER}, mode: ${MODE}, loop: ${LOOP}. When you finish, get blocked, or need a decision, notify ${SENDER} using your tmux_reply skill, and carry loop: ${LOOP} back in that reply.]"
+  FOOTER="[dispatched from tmux pane ${SENDER}. When you finish, get blocked, or need a decision, notify ${SENDER} using your tmux_reply skill.]"
 else
   FOOTER="[dispatched by an agent outside tmux -- no reply channel available.]"
 fi

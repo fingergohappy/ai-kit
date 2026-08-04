@@ -23,7 +23,7 @@ Entry gate for the receiving end. After receiving content from the originating e
 
 ## Evaluation Dimensions
 
-### When receiving an initial task (message contains `[dispatched from tmux pane %N, mode: task]`)
+### When receiving an initial task (a dispatched task with no prior review context)
 
 Check the task content item by item:
 
@@ -34,7 +34,7 @@ Check the task content item by item:
 | Scope | Is it asking to modify things it should not modify; is the scope reasonable |
 | Feasibility | Are dependencies met; is it technically achievable |
 
-### When receiving a fix instruction (message contains `[dispatched from tmux pane %N, mode: fix]`)
+### When receiving a fix instruction (the dispatched message is a list of review findings with fix suggestions)
 
 Verify each issue item by item:
 

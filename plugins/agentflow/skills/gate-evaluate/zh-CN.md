@@ -3,7 +3,7 @@ name: gate-evaluate
 description: |
   接收端入口守卫，执行前评估传入任务或修复指令的合理性，不合理则拒绝或跳过。
 when_to_use: |
-  当用户说「评估下」「看看合不合理」「evaluate」时触发。当收到带有 [dispatched from tmux pane %N, mode: task] 或 [dispatched from tmux pane %N, mode: fix] 标签的消息时，应在执行前先触发此 skill。
+  当用户说「评估下」「看看合不合理」「evaluate」时触发。当收到带有 [dispatched from tmux pane %N] 标签的消息时，应在执行前先触发此 skill。
 argument-hint: "[<待评估的内容>]"
 model: opus
 context: fork
@@ -27,7 +27,7 @@ disable-model-invocation: false
 
 ### First Task（首次任务）
 
-收到首次任务时（消息含 `[dispatched from tmux pane %N, mode: task]`），逐条检查任务内容：
+收到首次任务时（派发来的任务，且不带既往审查上下文），逐条检查任务内容：
 
 | 维度 | 检查内容 |
 |------|---------|
@@ -38,7 +38,7 @@ disable-model-invocation: false
 
 ### Fix Instructions（修复指令）
 
-收到修复指令时（消息含 `[dispatched from tmux pane %N, mode: fix]`），逐条验证每个问题：
+收到修复指令时（派发来的消息是一份审查问题清单和修复建议），逐条验证每个问题：
 
 | 维度 | 检查内容 |
 |------|---------|
