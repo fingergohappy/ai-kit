@@ -12,6 +12,7 @@
 | `fix-review` | 修复审查报告中的问题，自动更新报告状态 |
 | `fix-review-all` | 并行修复审查报告中所有待处理问题 |
 | `nvim-lsp-init` | 分析项目技术栈，生成 Neovim LSP 环境初始化脚本 |
+| `nvim-hints` | 在运行中的 Neovim 里标注代码链路：qflist 按执行顺序列步骤 + virtual text 行内说明 |
 
 ### 生成物（项目 `.claude/skills/`）
 
@@ -40,6 +41,11 @@
 
 5. 生成 LSP 脚本
    /code-kit:nvim-lsp-init        # 分析技术栈，生成 scripts/env-lsp.sh
+
+6. 在 nvim 中标注调用链路
+   # 对话中给出 nvim socket，然后描述要梳理的链路，例如：
+   # 「socket 是 /run/user/1000/nvim.12345.0，帮我梳理支付创建的调用链路」
+   # Claude 分析后用 qflist + virtual text 标注，]q/[q 顺链路跳转
 ```
 
 ## 安装

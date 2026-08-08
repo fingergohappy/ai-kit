@@ -15,13 +15,14 @@
     "evaluate",
     "fix",
     "lsp",
+    "nvim",
     "quality"
   ],
   "skills": "./skills/",
   "interface": {
     "displayName": "Code Kit",
     "shortDescription": "Code review, evaluation, and fix workflow utilities.",
-    "longDescription": "Utilities for initializing project-specific review skills, evaluating technical claims, generating review reports, fixing review findings, and preparing Neovim LSP environments.",
+    "longDescription": "Utilities for initializing project-specific review skills, evaluating technical claims, generating review reports, fixing review findings, preparing Neovim LSP environments, and annotating code paths inside a running Neovim via quickfix and virtual text.",
     "developerName": "finger",
     "category": "Coding",
     "capabilities": [
