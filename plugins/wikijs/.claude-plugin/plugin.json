@@ -1,0 +1,15 @@
+{
+  "name": "wikijs",
+  "version": "1.0.0",
+  "description": "Query, search, publish, and update pages on the internal Wiki.js knowledge base via its GraphQL API",
+  "author": {
+    "name": "finger",
+    "email": "fingergohappy@gmail.com",
+    "url": "https://github.com/fingergohappy"
+  },
+  "homepage": "https://github.com/fingergohappy/ai-kit/tree/main/plugins/wikijs",
+  "repository": "https://github.com/fingergohappy/ai-kit",
+  "license": "MIT",
+  "keywords": ["wiki", "wikijs", "graphql", "documentation", "knowledge-base"],
+  "skills": "./skills/"
+}

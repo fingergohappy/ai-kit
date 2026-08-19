@@ -1,0 +1,37 @@
+{
+  "name": "wikijs",
+  "version": "1.0.0",
+  "description": "Query, search, publish, and update pages on the internal Wiki.js knowledge base via its GraphQL API.",
+  "author": {
+    "name": "finger",
+    "email": "fingergohappy@gmail.com",
+    "url": "https://github.com/fingergohappy"
+  },
+  "homepage": "https://github.com/fingergohappy/ai-kit/tree/main/plugins/wikijs",
+  "repository": "https://github.com/fingergohappy/ai-kit",
+  "license": "MIT",
+  "keywords": [
+    "wiki",
+    "wikijs",
+    "graphql",
+    "documentation",
+    "knowledge-base"
+  ],
+  "skills": "./skills/",
+  "interface": {
+    "displayName": "WikiJS",
+    "shortDescription": "Query, search, publish, and update internal Wiki.js pages.",
+    "longDescription": "Operate the internal Wiki.js knowledge base through its GraphQL API: search and read ops documentation (deployments, servers, databases, middleware), publish new pages, and update existing ones. Requires the WIKIJS_TOKEN environment variable.",
+    "developerName": "finger",
+    "category": "Productivity",
+    "capabilities": [
+      "Read",
+      "Write"
+    ],
+    "websiteURL": "https://github.com/fingergohappy/ai-kit",
+    "defaultPrompt": [
+      "Use wikijs:wikijs to search the internal wiki for kafka deployment info.",
+      "Use wikijs:wikijs to publish these deployment notes to the wiki under app/."
+    ]
+  }
+}
