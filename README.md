@@ -39,11 +39,11 @@ After installation, restart Claude Code. Skills will be available with the plugi
 
 ```
 /agentflow:task login-system
-/tmux:tmux_dispatch %7 docs/tasks/login_feature.md
+/tmux:tmux-dispatch %7 docs/tasks/login_feature.md
 /code-kit:evaluate "use postgres vs mysql"
 /learning:learn rust lifetimes
 /git:commit
-/tmux:tmux_reply %5 "DONE: login feature implemented"
+/tmux:tmux-reply %5 "DONE: login feature implemented"
 ```
 
 <details>
@@ -81,7 +81,7 @@ Detailed guide:
 
 ### agentflow
 
-Agent collaboration loop: task → dispatch → evaluate → report → review → redo. The dispatch and report legs are provided by the `tmux` plugin (`tmux_dispatch` / `tmux_reply`).
+Agent collaboration loop: task → dispatch → evaluate → report → review → redo. The dispatch and report legs are provided by the `tmux` plugin (`tmux-dispatch` / `tmux-reply`).
 
 | Skill | Purpose |
 |-------|---------|
@@ -124,8 +124,8 @@ Tmux infrastructure utilities for inter-pane communication and long-running serv
 
 | Skill | Purpose |
 |-------|---------|
-| `tmux:tmux_dispatch` | Dispatch a task to an agent in another pane, stamping a reply channel |
-| `tmux:tmux_reply` | Report back to the pane that dispatched the task |
+| `tmux:tmux-dispatch` | Dispatch a task to an agent in another pane, stamping a reply channel |
+| `tmux:tmux-reply` | Report back to the pane that dispatched the task |
 | `tmux:agent-tmux` | Start/restart/stop long-running commands in shared tmux session (auto-isolates by project/branch) |
 
 ### git
@@ -152,14 +152,14 @@ Enter design discussion mode — discuss without writing code, generate document
 #### 2. Dispatch Phase
 
 ```
-/tmux:tmux_dispatch <pane_id> <doc-path>
+/tmux:tmux-dispatch <pane_id> <doc-path>
 ```
 
 Send the task document to another agent's tmux pane. The receiving agent gets a message stamped `[dispatched from tmux pane %N. ...]`, which tells it where to report back to.
 
 #### 3. Execution & Report
 
-The receiver evaluates the task via `gate-evaluate`, executes, then calls `tmux_reply` to send results back:
+The receiver evaluates the task via `gate-evaluate`, executes, then calls `tmux-reply` to send results back:
 
 ```
 [reply from tmux pane %9, re: the task you dispatched]
@@ -209,7 +209,7 @@ Collects dual-source evidence (project facts + external best practices) and prod
 ### Task Dispatch
 
 ```
-[dispatched from tmux pane {pane_id}. When you finish, get blocked, or need a decision, notify {pane_id} using your tmux_reply skill.]
+[dispatched from tmux pane {pane_id}. When you finish, get blocked, or need a decision, notify {pane_id} using your tmux-reply skill.]
 ```
 
 ### Execution Report
@@ -218,13 +218,13 @@ Collects dual-source evidence (project facts + external best practices) and prod
 [reply from tmux pane {pane_id}, re: the task you dispatched]
 ```
 
-Stamps are appended by `tmux_dispatch` / `tmux_reply`, not hand-written. The dispatch stamp is what makes the reply possible at all: it is the only place the receiving agent learns which pane to report back to.
+Stamps are appended by `tmux-dispatch` / `tmux-reply`, not hand-written. The dispatch stamp is what makes the reply possible at all: it is the only place the receiving agent learns which pane to report back to.
 
 ## Requirements
 
 - tmux session with multiple panes
 - AI coding tool running in each pane (Claude Code, Codex, OpenCode, etc.)
-- `tmux:tmux_dispatch` and `tmux:tmux_reply` skills available for inter-pane communication
+- `tmux:tmux-dispatch` and `tmux:tmux-reply` skills available for inter-pane communication
 
 ## License
 

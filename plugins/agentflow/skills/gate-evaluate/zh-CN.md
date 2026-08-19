@@ -89,5 +89,5 @@ disable-model-invocation: false
 | 总体判断 | 行为 |
 |---------|------|
 | 全部合理 | 正常执行全部任务 |
-| 部分不合理 | 跳过不合理项，执行其余部分，在 tmux_reply skill 中说明跳过原因 |
-| 整体不合理 | 不执行，直接调用 tmux_reply skill 向发起端汇报拒绝原因 |
+| 部分不合理 | 跳过不合理项，执行其余部分，在 tmux-reply skill 中说明跳过原因 |
+| 整体不合理 | 不执行，直接调用 tmux-reply skill 向发起端汇报拒绝原因 |

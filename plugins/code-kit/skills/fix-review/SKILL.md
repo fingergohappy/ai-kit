@@ -65,7 +65,7 @@ Issue Evaluation:
 Report: docs/review/2026-04-26_full_review.md
 ### #3 [shell] Variable unquoted in here-string
 
-**文件**: `plugins/tmux/skills/tmux_dispatch/scripts/dispatch.sh:30`
+**文件**: `plugins/tmux/skills/tmux-dispatch/scripts/dispatch.sh:30`
 **问题**: ${BODY} comes from an external file or user-supplied parameter, content is uncontrolled...
 **建议**: Use printf '%s\n' "$BODY" to write to a temp file...
 
@@ -142,7 +142,7 @@ Append a row to the change history table at the end of the report:
 
 ```
 Fixed and report updated:
-- Source file: plugins/tmux/skills/tmux_dispatch/scripts/dispatch.sh
+- Source file: plugins/tmux/skills/tmux-dispatch/scripts/dispatch.sh
 - Report: docs/review/2026-04-26_full_review.md
 - Status: [todo] → [done]
 ```

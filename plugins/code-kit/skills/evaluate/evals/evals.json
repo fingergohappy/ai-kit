@@ -17,7 +17,7 @@
       "id": 3,
       "prompt": "分析下我们在 dispatch.sh 里用 printf '%s\\n' 代替 echo 处理用户输入这个做法靠不靠谱",
       "expected_output": "应该搜索 POSIX shell 规范中 echo 和 printf 的行为差异，结合项目源码上下文评估，给出有引用的判断",
-      "files": ["plugins/tmux/skills/tmux_dispatch/scripts/dispatch.sh"]
+      "files": ["plugins/tmux/skills/tmux-dispatch/scripts/dispatch.sh"]
     }
   ]
 }

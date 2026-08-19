@@ -1,18 +1,18 @@
 ---
-name: tmux_dispatch
+name: tmux-dispatch
 description: |
-  把任务派给另一个 tmux pane 里的 agent，按 pane id 定位，并在任务末尾盖上自己的 pane id，让对方干完主动回报。当用户说「让 7 去做」「把任务发给 %3」「叫那个 pane 处理」「让另一个 agent 跑一下」，或者在描述把活分给多个 pane / agent 时触发。只负责投递，不等待、不轮询——对方通过 tmux_reply 敲门。
+  把任务派给另一个 tmux pane 里的 agent，按 pane id 定位，并在任务末尾盖上自己的 pane id，让对方干完主动回报。当用户说「让 7 去做」「把任务发给 %3」「叫那个 pane 处理」「让另一个 agent 跑一下」，或者在描述把活分给多个 pane / agent 时触发。只负责投递，不等待、不轮询——对方通过 tmux-reply 敲门。
 when_to_use: |
   当用户说「让 7 去做…」「派给 %3」「把这个任务发给 5」「叫 codex 那边处理」「这块你派出去」「让另一个 agent 跑一下」时触发。也包括用户在描述把工作拆给多个 pane 但没点名工具的情况。
 argument-hint: "[<pane_id>] [<任务>]"
 disable-model-invocation: false
 ---
 
-# tmux_dispatch
+# tmux-dispatch
 
 把任务交给另一个 tmux pane 里的 agent，然后让开。
 
-和 `tmux_reply` 成对使用才是重点。本 skill 只负责投递，不盯着对方的 pane 看，也不应该看——循环 `capture-pane` 只是把自己这一轮耗在一块只有对方能推进的屏幕上。取而代之的是：每个派出去的任务都盖着你的 pane id 和一句「用 tmux_reply 回报」。对方干完自己敲门，你这边这段时间是自由的。
+和 `tmux-reply` 成对使用才是重点。本 skill 只负责投递，不盯着对方的 pane 看，也不应该看——循环 `capture-pane` 只是把自己这一轮耗在一块只有对方能推进的屏幕上。取而代之的是：每个派出去的任务都盖着你的 pane id 和一句「用 tmux-reply 回报」。对方干完自己敲门，你这边这段时间是自由的。
 
 ## 确定 pane id
 

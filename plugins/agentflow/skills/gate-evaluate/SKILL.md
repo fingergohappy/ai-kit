@@ -87,5 +87,5 @@ The main agent decides based on the evaluation conclusion:
 | Overall verdict | Action |
 |----------------|--------|
 | All reasonable | Execute all tasks normally |
-| Partially unreasonable | Skip unreasonable items, execute the rest, explain skip reasons in the tmux_reply skill |
-| Entirely unreasonable | Do not execute; directly invoke the tmux_reply skill to send rejection reasons back to the originating end |
+| Partially unreasonable | Skip unreasonable items, execute the rest, explain skip reasons in the tmux-reply skill |
+| Entirely unreasonable | Do not execute; directly invoke the tmux-reply skill to send rejection reasons back to the originating end |

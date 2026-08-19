@@ -1,14 +1,14 @@
 ---
-name: tmux_dispatch
-description: Dispatch a task to an agent (Claude Code, Codex, ...) running in another tmux pane, addressed by pane id, stamping your own pane id so that agent reports back when it finishes. Use this whenever the user wants work handed off to another pane or another agent — "让 7 去做…", "把这个任务发给 %3", "dispatch this to pane 5", "让另一个 agent 跑一下", "叫 codex 那边处理这个", "这块你派出去" — and also when they describe splitting work across panes or agents without naming any tool. Delivery is fire-and-forget: it returns the moment the task lands and never waits or polls; the receiving agent notifies you through its tmux_reply skill.
+name: tmux-dispatch
+description: Dispatch a task to an agent (Claude Code, Codex, ...) running in another tmux pane, addressed by pane id, stamping your own pane id so that agent reports back when it finishes. Use this whenever the user wants work handed off to another pane or another agent — "让 7 去做…", "把这个任务发给 %3", "dispatch this to pane 5", "让另一个 agent 跑一下", "叫 codex 那边处理这个", "这块你派出去" — and also when they describe splitting work across panes or agents without naming any tool. Delivery is fire-and-forget: it returns the moment the task lands and never waits or polls; the receiving agent notifies you through its tmux-reply skill.
 argument-hint: "[<pane_id>] [<task>]"
 ---
 
-# tmux_dispatch
+# tmux-dispatch
 
 Hand a task to an agent running in another tmux pane, then get out of the way.
 
-The pairing matters: this skill only delivers. It does not watch the other pane, and it must not — polling `capture-pane` in a loop burns your turn on a screen that only the other agent can advance. Instead, every dispatched task carries a stamp with your pane id and an instruction to report back via the `tmux_reply` skill. The other agent knocks when it's done; you stay free in the meantime.
+The pairing matters: this skill only delivers. It does not watch the other pane, and it must not — polling `capture-pane` in a loop burns your turn on a screen that only the other agent can advance. Instead, every dispatched task carries a stamp with your pane id and an instruction to report back via the `tmux-reply` skill. The other agent knocks when it's done; you stay free in the meantime.
 
 ## Resolve the pane id
 

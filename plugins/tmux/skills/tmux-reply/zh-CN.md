@@ -1,14 +1,14 @@
 ---
-name: tmux_reply
+name: tmux-reply
 description: |
-  向派活给你的那个 tmux pane 回报结果。当你手上的任务是从别的 pane 派过来的（消息里带着 `[dispatched from tmux pane %5]` 这样的戳），而你现在做完了、卡住了、或者需要派发方拍板时，主动使用——不用等人再问一遍。用户说「通知 5」「告诉派活给我那个 pane」「回报一下进展」「跟 %3 说我做完了」时同样触发。这是 tmux_dispatch 的返回半程：派发方从不轮询你，报告不发出去就等于没人知道这活干过。
+  向派活给你的那个 tmux pane 回报结果。当你手上的任务是从别的 pane 派过来的（消息里带着 `[dispatched from tmux pane %5]` 这样的戳），而你现在做完了、卡住了、或者需要派发方拍板时，主动使用——不用等人再问一遍。用户说「通知 5」「告诉派活给我那个 pane」「回报一下进展」「跟 %3 说我做完了」时同样触发。这是 tmux-dispatch 的返回半程：派发方从不轮询你，报告不发出去就等于没人知道这活干过。
 when_to_use: |
   当前任务带着 `[dispatched from tmux pane %N]` 戳且已完成或卡住时触发；或用户说「通知 {number}」「回报给 {number}」「告诉那个派活的 pane」「跟 {number} 说我做完了」时触发。
 argument-hint: "[<pane_id>] [<消息>]"
 disable-model-invocation: false
 ---
 
-# tmux_reply
+# tmux-reply
 
 把报告发回给派活给你的那个 pane。
 

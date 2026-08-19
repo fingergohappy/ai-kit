@@ -29,8 +29,8 @@
     ],
     "websiteURL": "https://github.com/fingergohappy/ai-kit",
     "defaultPrompt": [
-      "Use tmux:tmux_dispatch to send this task to the agent in tmux pane %7.",
-      "Use tmux:tmux_reply to report the result back to the pane that dispatched this task."
+      "Use tmux:tmux-dispatch to send this task to the agent in tmux pane %7.",
+      "Use tmux:tmux-reply to report the result back to the pane that dispatched this task."
     ]
   }
 }

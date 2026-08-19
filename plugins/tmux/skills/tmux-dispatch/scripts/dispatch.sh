@@ -47,7 +47,7 @@ fi
 # receiving agent where the task came from, so it can report back on its own
 # instead of leaving the dispatcher to poll.
 if [[ -n "$SENDER" ]]; then
-  FOOTER="[dispatched from tmux pane ${SENDER}. When you finish, get blocked, or need a decision, notify ${SENDER} using your tmux_reply skill.]"
+  FOOTER="[dispatched from tmux pane ${SENDER}. When you finish, get blocked, or need a decision, notify ${SENDER} using your tmux-reply skill.]"
 else
   FOOTER="[dispatched by an agent outside tmux -- no reply channel available.]"
 fi

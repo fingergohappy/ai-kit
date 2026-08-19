@@ -1,10 +1,10 @@
 ---
-name: tmux_reply
-description: Report back to the tmux pane that dispatched a task to you. Use this proactively — without being asked again — whenever the task you are working on arrived from another pane (the message carried a stamp like "[dispatched from tmux pane %5 ...]") and you have now finished it, hit a blocker, or need a decision only the dispatcher can make. Also use it when the user says "通知 5"、"告诉 dispatch 我的那个 pane"、"回报一下进展"、"跟 %3 说我做完了", "reply to the pane that sent this", "tell the other agent I'm done". This is the return half of tmux_dispatch: the dispatcher never polls you, so an unsent report means nobody knows the work happened.
+name: tmux-reply
+description: Report back to the tmux pane that dispatched a task to you. Use this proactively — without being asked again — whenever the task you are working on arrived from another pane (the message carried a stamp like "[dispatched from tmux pane %5 ...]") and you have now finished it, hit a blocker, or need a decision only the dispatcher can make. Also use it when the user says "通知 5"、"告诉 dispatch 我的那个 pane"、"回报一下进展"、"跟 %3 说我做完了", "reply to the pane that sent this", "tell the other agent I'm done". This is the return half of tmux-dispatch: the dispatcher never polls you, so an unsent report means nobody knows the work happened.
 argument-hint: "[<pane_id>] [<message>]"
 ---
 
-# tmux_reply
+# tmux-reply
 
 Send a report back to the pane that dispatched your current task.
 
