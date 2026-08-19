@@ -44,6 +44,12 @@
       "description": "Tmux utilities for sending commands and text across panes",
       "source": "./plugins/tmux",
       "category": "Developer Tools"
+    },
+    {
+      "name": "wikijs",
+      "description": "Query, search, publish, and update pages on the internal Wiki.js knowledge base via GraphQL API",
+      "source": "./plugins/wikijs",
+      "category": "Productivity"
     }
   ]
 }

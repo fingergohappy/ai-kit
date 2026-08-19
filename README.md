@@ -137,6 +137,14 @@ Git worktree and branching utilities.
 | `git:rebase-to-root` | Rebase worktree feature branch back to root's current branch |
 | `git:commit` | Create atomic git commits with validation and conventional commit messages |
 
+### wikijs
+
+Internal Wiki.js knowledge base operations via GraphQL API. Requires the `WIKIJS_TOKEN` environment variable (generated in the Wiki.js admin panel under API Access).
+
+| Skill | Purpose |
+|-------|---------|
+| `wikijs:wikijs` | Query, search, read, publish, and update pages on the internal Wiki.js |
+
 ## Workflow
 
 ### Agent Collaboration (agentflow)
