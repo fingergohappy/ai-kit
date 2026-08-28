@@ -1,7 +1,7 @@
 {
   "name": "tmux",
   "version": "1.0.0",
-  "description": "Tmux utilities for dispatching tasks to agents in other panes and reporting results back.",
+  "description": "Tmux utilities for dispatching tasks to agents in other panes through shared channel documents and reporting results back.",
   "author": {
     "name": "finger",
     "email": "fingergohappy@gmail.com",
@@ -19,8 +19,8 @@
   "skills": "./skills/",
   "interface": {
     "displayName": "Tmux",
-    "shortDescription": "Dispatch tasks to agents in other tmux panes and report back.",
-    "longDescription": "Utilities for inter-pane agent collaboration in tmux: dispatch a task to an agent in another pane with a reply channel stamped into the message, and report results back to the pane that dispatched it.",
+    "shortDescription": "Dispatch tasks to agents in other tmux panes via channel documents and report back.",
+    "longDescription": "Utilities for inter-pane agent collaboration in tmux: write the task to a channel document under docs/tmux-channel/, send the other pane only that document's path with a reply channel stamped into the message, and report results back by appending them to the same document.",
     "developerName": "finger",
     "category": "Developer Tools",
     "capabilities": [
@@ -29,8 +29,8 @@
     ],
     "websiteURL": "https://github.com/fingergohappy/ai-kit",
     "defaultPrompt": [
-      "Use tmux:tmux-dispatch to send this task to the agent in tmux pane %7.",
-      "Use tmux:tmux-reply to report the result back to the pane that dispatched this task."
+      "Use tmux:tmux-dispatch to hand this task to the agent in tmux pane %7 through a docs/tmux-channel document.",
+      "Use tmux:tmux-reply to append the result to the channel document and report back to the pane that dispatched this task."
     ]
   }
 }

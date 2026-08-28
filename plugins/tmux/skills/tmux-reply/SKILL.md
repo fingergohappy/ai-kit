@@ -1,36 +1,38 @@
 ---
 name: tmux-reply
-description: Report back to the tmux pane that dispatched a task to you. Use this proactively — without being asked again — whenever the task you are working on arrived from another pane (the message carried a stamp like "[dispatched from tmux pane %5 ...]") and you have now finished it, hit a blocker, or need a decision only the dispatcher can make. Also use it when the user says "通知 5"、"告诉 dispatch 我的那个 pane"、"回报一下进展"、"跟 %3 说我做完了", "reply to the pane that sent this", "tell the other agent I'm done". This is the return half of tmux-dispatch: the dispatcher never polls you, so an unsent report means nobody knows the work happened.
+description: Report back to the tmux pane that dispatched a task to you by appending a "## Report" section to the channel document the task arrived in, then sending that pane only the document's path. Use this proactively — without being asked again — whenever the task you are working on arrived from another pane (the message pointed at a document and carried a stamp like "[dispatched from tmux pane %5 ...]") and you have now finished it, hit a blocker, or need a decision only the dispatcher can make. Also use it when the user says "通知 5"、"告诉 dispatch 我的那个 pane"、"回报一下进展"、"跟 %3 说我做完了", "reply to the pane that sent this", "tell the other agent I'm done". This is the return half of tmux-dispatch: the dispatcher never polls you, so an unwritten report means nobody knows the work happened.
 argument-hint: "[<pane_id>] [<message>]"
 ---
 
 # tmux-reply
 
-Send a report back to the pane that dispatched your current task.
+Write your report into the channel document the task came in, then knock on the pane that dispatched it.
 
-Why this needs saying at all: the dispatcher deliberately does not watch you. It handed off the task and moved on, so there is no progress bar, no polling, no timeout — the *only* thing that closes the loop is you sending this message. Finishing the work and staying quiet looks identical to never having started.
+Why this needs saying at all: the dispatcher deliberately does not watch you. It handed off the task and moved on, so there is no progress bar, no polling, no timeout — the *only* thing that closes the loop is this message. Finishing the work and staying quiet looks identical to never having started.
 
-## Find the dispatcher's pane id
+And the report goes in the document, not in the pane. The dispatcher has to check your result against the brief; in the document the two sit one under the other and stay readable a week later, whereas a pasted report is gone the moment that agent compacts its context.
 
-It's in the stamp on the task you received: `[dispatched from tmux pane %5. When you finish, ...]`. That `%5` is the target — look back at the message that started this work rather than guessing from the current tmux layout.
+## Find the document and the dispatcher's pane id
+
+Both are in the message that started this work:
+
+```
+Task document: /Users/me/proj/docs/tmux-channel/20260426-1930-fix-verify-token.md
+
+[dispatched from tmux pane %5. That document is the task -- read it; ...]
+```
+
+That path is where you write, and `%5` is where you knock. Use the absolute path from the message verbatim — never the same relative path resolved in your own cwd, which in another checkout of the same repo is a different file, and your report would land where nobody is looking.
 
 If the task carried no stamp, it wasn't dispatched and there is nobody expecting a report; just answer the user normally. If you're sure a report is wanted but can't find the pane id, ask in plain prose — don't list panes and don't send to a pane you inferred, since a report landing in a stranger's session is worse than a report that arrives late.
 
-## Write the report
+## Append the report
 
-The dispatcher is another agent, and your message arrives there as a fresh turn with none of your working context. It has to decide in one glance whether the task is closed, so lead with the verdict and then support it:
+Add a new section at the **end** of the document, leaving everything above it untouched — the channel is append-only, and the brief you were given is the thing your result will be checked against:
 
-- **First line is the verdict**: `DONE: …`, `BLOCKED: …`, or `QUESTION: …`. Nothing else reads as fast, and the dispatcher's next action is entirely different in each case.
-- **Absolute paths** for every file you touched. The dispatcher may be in a different directory or checkout.
-- **Evidence, not assurance.** The command you ran and its actual result beats "tests pass" — the dispatcher may need to relay this to a user who will check.
-- **What you did not do**, and why: skipped scope, a fix you judged out of bounds, a guess you had to make. Silent omissions become the dispatcher's bugs.
-- **For `BLOCKED` / `QUESTION`, state the specific decision needed** and what you already tried. A vague blocker just bounces the round trip back to you.
+```markdown
+## Report — %7 → %5 — 2026-04-26 20:05
 
-Thin — `做完了`
-
-Substantive:
-
-```
 DONE: 修好了 verifyToken 的毫秒/秒比较问题。
 改动：/Users/me/proj/src/auth.ts:42 改为 `payload.exp < Date.now()`；
 新增 /Users/me/proj/test/auth.test.ts 里的 "freshly signed token is valid" 用例。
@@ -38,7 +40,17 @@ DONE: 修好了 verifyToken 的毫秒/秒比较问题。
 未处理：refreshToken 里有同样的秒/毫秒混用（auth.ts:71），按你的要求没动。
 ```
 
-Keep it to what the dispatcher needs in order to act. A full narrative of your debugging costs it a re-read and adds nothing it can use.
+Keep the heading in English and starting with `Report` — `reply.sh` checks that the document's last section is one, and refuses to knock otherwise. That check is the point: it catches the expensive failure of announcing work that was never written down.
+
+What the body owes the dispatcher, which is another agent reading this cold:
+
+- **First line is the verdict**: `DONE: …`, `BLOCKED: …`, or `QUESTION: …`. Nothing else reads as fast, and the dispatcher's next action is entirely different in each case.
+- **Absolute paths** for every file you touched. The dispatcher may be in a different directory or checkout.
+- **Evidence, not assurance.** The command you ran and its actual result beats "tests pass" — the dispatcher may need to relay this to a user who will check.
+- **What you did not do**, and why: skipped scope, a fix you judged out of bounds, a guess you had to make. Silent omissions become the dispatcher's bugs.
+- **For `BLOCKED` / `QUESTION`, state the specific decision needed** and what you already tried. A vague blocker just bounces the round trip back to you.
+
+Thin — `做完了`. Substantive — the block above. Keep it to what the dispatcher needs in order to act; a full narrative of your debugging costs it a re-read and adds nothing it can use.
 
 ## Script paths
 
@@ -51,19 +63,15 @@ SKILL_DIR="<absolute path of the directory holding this SKILL.md>"
 ## Send it
 
 ```bash
-# Short report, passed inline
-bash "$SKILL_DIR/scripts/reply.sh" "<pane_id>" "<message>"
-
-# Longer or multi-line report — write it to a file first, pass the path
-bash "$SKILL_DIR/scripts/reply.sh" "<pane_id>" "/tmp/reply.txt"
+bash "$SKILL_DIR/scripts/reply.sh" "<pane_id>" "<doc_path>" "<verdict line>"
 ```
 
-Use the file form as soon as the report is multi-line or contains backticks or quotes — shell quoting mangles reports quietly, and a garbled report is worse than none.
+The verdict is optional and is the only content that travels — one line so the dispatcher can triage at a glance. The script collapses newlines and truncates it; the substance stays in the document.
 
-Send only through this script — never `tmux send-keys` with the report text. The script handles bracketed paste so your multi-line report doesn't submit itself line by line, sends Enter as a separate event so the dispatcher's TUI actually receives it, stamps your pane id, and fails loudly if the dispatcher's pane is gone (which means the work happened but the report has nowhere to land — worth telling your own user about).
+Send only through this script — never `tmux send-keys` with report text. It refuses to send if the document's last section isn't your report, resolves the path to an absolute one, uses bracketed paste so the pointer doesn't submit itself line by line, sends Enter as a separate event so the dispatcher's TUI actually receives it, stamps your pane id, and fails loudly if the dispatcher's pane is gone — which means the work happened and the report is safely on disk, but nobody has been told. Say that to your own user, with the document path.
 
-## One report per task
+## One knock per task
 
-Send the report once, then stop. Don't follow up with an acknowledgement, and if the dispatcher answers your `QUESTION`, treat the answer as instructions to act on — not as something to confirm receipt of.
+Send once, then stop. Don't follow up with an acknowledgement, and if the dispatcher answers your `QUESTION`, treat the answer as instructions to act on — not as something to confirm receipt of.
 
-The reason is structural: every message into a pane starts a new turn for the agent there. Two agents each being polite will trade acknowledgements indefinitely, and both burn real tokens doing it. Send a second message only when there is new substance: a follow-up finding, a later failure, work that finished after your first report.
+The reason is structural: every message into a pane starts a new turn for the agent there. Two agents each being polite will trade acknowledgements indefinitely, and both burn real tokens doing it. Knock a second time only when there is new substance — a follow-up finding, a later failure, work that finished after your first report — and when you do, append a new `## Report` section rather than editing the old one.
