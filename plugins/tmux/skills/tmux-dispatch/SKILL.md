@@ -1,6 +1,7 @@
 ---
 name: tmux-dispatch
-description: Dispatch a task to an agent (Claude Code, Codex, ...) running in another tmux pane by writing the brief to a document under docs/tmux-channel/ and sending that pane only the document's path, stamped with your own pane id so the agent reports back into the same document. Use this whenever the user wants work handed off to another pane or another agent — "让 7 去做…", "把这个任务发给 %3", "dispatch this to pane 5", "让另一个 agent 跑一下", "叫 codex 那边处理这个", "这块你派出去" — and also when they describe splitting work across panes or agents without naming any tool. Delivery is fire-and-forget: it returns the moment the pointer lands and never waits or polls; the receiving agent appends its report to the document and knocks back through its tmux-reply skill with a one-line DONE: / BLOCKED: / QUESTION: status.
+description: |
+  Dispatch a task to an agent (Claude Code, Codex, ...) running in another tmux pane by writing the brief to a document under docs/tmux-channel/ and sending that pane only the document's path, stamped with your own pane id so the agent reports back into the same document. Use this whenever the user wants work handed off to another pane or another agent — "让 7 去做…", "把这个任务发给 %3", "dispatch this to pane 5", "让另一个 agent 跑一下", "叫 codex 那边处理这个", "这块你派出去" — and also when they describe splitting work across panes or agents without naming any tool. Delivery is fire-and-forget: it returns the moment the pointer lands and never waits or polls; the receiving agent appends its report to the document and knocks back through its tmux-reply skill with a one-line DONE: / BLOCKED: / QUESTION: status.
 argument-hint: "[<pane_id>] [<task>]"
 ---
 
