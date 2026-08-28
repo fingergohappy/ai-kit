@@ -1,6 +1,6 @@
 ---
 name: tmux-dispatch
-description: Dispatch a task to an agent (Claude Code, Codex, ...) running in another tmux pane by writing the brief to a document under docs/tmux-channel/ and sending that pane only the document's path, stamped with your own pane id so the agent reports back into the same document. Use this whenever the user wants work handed off to another pane or another agent — "让 7 去做…", "把这个任务发给 %3", "dispatch this to pane 5", "让另一个 agent 跑一下", "叫 codex 那边处理这个", "这块你派出去" — and also when they describe splitting work across panes or agents without naming any tool. Delivery is fire-and-forget: it returns the moment the pointer lands and never waits or polls; the receiving agent appends its report to the document and knocks through its tmux-reply skill.
+description: Dispatch a task to an agent (Claude Code, Codex, ...) running in another tmux pane by writing the brief to a document under docs/tmux-channel/ and sending that pane only the document's path, stamped with your own pane id so the agent reports back into the same document. Use this whenever the user wants work handed off to another pane or another agent — "让 7 去做…", "把这个任务发给 %3", "dispatch this to pane 5", "让另一个 agent 跑一下", "叫 codex 那边处理这个", "这块你派出去" — and also when they describe splitting work across panes or agents without naming any tool. Delivery is fire-and-forget: it returns the moment the pointer lands and never waits or polls; the receiving agent appends its report to the document and knocks back through its tmux-reply skill with a one-line DONE: / BLOCKED: / QUESTION: status.
 argument-hint: "[<pane_id>] [<task>]"
 ---
 
@@ -12,7 +12,7 @@ Two rules shape everything below.
 
 **The document is the message.** The brief goes into a file under `docs/tmux-channel/`; what travels through tmux is its absolute path and nothing else. Pasted task text exists only in the other pane's scrollback — it cannot be re-read after that agent compacts its context, cannot be quoted back when you review the result, and arrives shredded if a newline lands wrong. A document survives all of that, and afterwards both agents can point at the same text and disagree about it precisely.
 
-**Deliver, then stop.** This skill does not watch the other pane, and must not — polling `capture-pane` in a loop burns your turn on a screen only the other agent can advance. Every dispatch carries a stamp with your pane id and an instruction to append the report to the same document. The other agent knocks when it's done; you stay free in the meantime.
+**Deliver, then stop.** This skill does not watch the other pane, and must not — polling `capture-pane` in a loop burns your turn on a screen only the other agent can advance. Every dispatch carries a stamp with your pane id and an instruction to append the report to the same document, then knock back with one line starting `DONE:`, `BLOCKED:` or `QUESTION:`. That line is what wakes you: you learn the outcome without opening anything, and open the document only when you need the evidence behind it. The other agent knocks when it's done; you stay free in the meantime.
 
 ## Resolve the pane id
 
@@ -38,7 +38,7 @@ One document per exchange, named `<YYYYMMDD-HHMM>-<slug>.md`, and it is append-o
 
 ## Report — %7 → %5 — 2026-04-26 20:05
 
-<the receiving agent appends this>
+DONE: <the receiving agent appends this, evidence below the status line>
 ```
 
 The `## Task` / `## Report` / `## Follow-up` headings are the protocol, not decoration: `reply.sh` refuses to knock unless the document's last section is a report, which is what stops an agent from announcing work it never wrote down. Keep the headings in English exactly as above; the body can be any language.
@@ -104,4 +104,17 @@ Report which pane you dispatched to, the channel document path, one line on what
 
 Read the receipt before you report success. If it shows the other agent mid-task, your dispatch is queued behind that work rather than started — say so, since "dispatched" and "being worked on" are different claims. If it shows a shell prompt or an unrelated program, the pointer probably landed in the wrong pane; surface that immediately instead of reporting a clean handoff.
 
-When the reply arrives it names the same document. Read the `## Report` section there rather than trusting the one-line verdict in your pane — that line is a label, and the evidence you'd relay to the user is in the file, directly under the brief it should be checked against. Treat it as a report to relay, not a message needing an answer. Dispatch again only if there is genuinely new work: append it to the same document as `## Follow-up` and send that document's path once more.
+## When the reply arrives
+
+It lands as two lines: a status and the same document path.
+
+```
+BLOCKED: refreshToken 也有秒/毫秒混用，需要你决定是否一并改
+Report in: /Users/me/proj/docs/tmux-channel/20260426-1930-fix-verify-token.md
+```
+
+The status decides your next move, and the three are genuinely different: `DONE:` closes the round trip, `BLOCKED:` means the task is stalled until you act, `QUESTION:` means the other agent is waiting on an answer you owe it. Act on that line — don't open the document just to find out which one it was.
+
+Then read the `## Report` section before you relay anything. The status is a headline; the evidence a user might check — the commands, the actual output, what the other agent skipped — is in the file, directly under the brief it should be measured against. Relaying the status alone passes on a claim you haven't looked at.
+
+Treat the reply as a report, not a message needing an answer. Respond only when the status asks you to: answer a `QUESTION:` or unblock a `BLOCKED:` by appending a `## Follow-up` section to the same document and sending its path once more. A `DONE:` needs nothing back — an acknowledgement just starts another turn over there.

@@ -4,17 +4,17 @@ Multi-agent collaboration plugin suite for AI coding tools — task-driven workf
 
 ## Overview
 
-ai-kit provides a collection of plugins that coordinate multiple AI agents (Claude Code, Codex, OpenCode, etc.) working in separate tmux panes through a structured task-driven workflow. Instead of ad-hoc communication, agents exchange documents: the task and the report are written to a shared channel file under `docs/tmux-channel/`, and only that file's path travels between panes — so every handoff leaves a traceable record instead of scrollback. Additional plugins provide code review, learning, and self-reflection capabilities.
+ai-kit provides a collection of plugins that coordinate multiple AI agents (Claude Code, Codex, OpenCode, etc.) working in separate tmux panes through a structured task-driven workflow. Instead of ad-hoc communication, agents exchange documents: the task and the report are written to a shared channel file under `docs/tmux-channel/`, and what travels between panes is that file's path plus a one-line status (`DONE:` / `BLOCKED:` / `QUESTION:`) — enough to act on at a glance, with every handoff leaving a traceable record instead of scrollback. Additional plugins provide code review, learning, and self-reflection capabilities.
 
 ```
-┌─────────────┐   path of task   ┌─────────────┐
-│  Agent A     │ ───────────────→ │  Agent B     │
-│  (Sender)    │                  │  (Receiver)  │
-│              │ ←─────────────── │              │
-└─────────────┘  path of report  └─────────────┘
-        │                                │
-        └──── docs/tmux-channel/*.md ────┘
-            ## Task  →  ## Report
+┌─────────────┐    path of task    ┌─────────────┐
+│  Agent A     │ ─────────────────→ │  Agent B     │
+│  (Sender)    │                    │  (Receiver)  │
+│              │ ←───────────────── │              │
+└─────────────┘  DONE: … + path of  └─────────────┘
+        │             report               │
+        └────── docs/tmux-channel/*.md ────┘
+              ## Task  →  ## Report
 ```
 
 ## Installation
@@ -179,10 +179,15 @@ The receiver evaluates the task via `gate-evaluate`, executes, appends its resul
 ```
 
 ```
-[reply from tmux pane %9, re: the task you dispatched. The report is the last "## Report" section of that document.]
+DONE: verifyToken 的毫秒/秒比较已修好，auth 测试 14 passed
+Report in: /Users/me/proj/docs/tmux-channel/20260426-1930-fix-verify-token.md
+
+[reply from tmux pane %9, re: the task you dispatched. The status line above is the outcome; the evidence behind it is the last "## Report" section of that document.]
 ```
 
-`reply.sh` refuses to send unless the document's last section is that report — announcing work that was never written down is the failure this protocol exists to prevent.
+The status travels, the evidence stays. That one line is required and must start with `DONE:`, `BLOCKED:` or `QUESTION:` — the three are the dispatcher's three different next moves (close it, unblock the other agent, answer it), and it should learn which one applies without opening a file. Everything the status rests on — diffs, commands, actual output, skipped scope — goes in the document.
+
+`reply.sh` enforces both halves: it rejects a status without one of those prefixes, and refuses to send at all unless the document's last section is that report — announcing work that was never written down is the failure this protocol exists to prevent.
 
 #### 4. Review
 
@@ -250,17 +255,19 @@ The `## Task` / `## Report` / `## Follow-up` headings are machine-read: `reply.s
 Task document: {absolute path}
 {optional one-line headline}
 
-[dispatched from tmux pane {pane_id}. That document is the task -- read it; this message is only the pointer. When you finish, get blocked, or need a decision, append a "## Report" section to the same document and notify {pane_id} using your tmux-reply skill.]
+[dispatched from tmux pane {pane_id}. That document is the task -- read it; this message is only the pointer. When you finish, get blocked, or need a decision, append a "## Report" section to the same document and notify {pane_id} using your tmux-reply skill, whose status line must start with DONE:, BLOCKED: or QUESTION:.]
 ```
 
 ### Execution Report
 
 ```
+{status line: DONE: ... | BLOCKED: ... | QUESTION: ...}
 Report in: {absolute path}
-{optional verdict line, e.g. DONE: ...}
 
-[reply from tmux pane {pane_id}, re: the task you dispatched. The report is the last "## Report" section of that document.]
+[reply from tmux pane {pane_id}, re: the task you dispatched. The status line above is the outcome; the evidence behind it is the last "## Report" section of that document.]
 ```
+
+The status line comes first because it is the part the dispatcher acts on; it is required, capped at one line, and truncated past 160 characters, so it stays a headline rather than a second copy of the report.
 
 Stamps are built by `tmux-dispatch` / `tmux-reply`, not hand-written. The dispatch stamp is what makes the reply possible at all: it is the only place the receiving agent learns which pane to report back to. Paths are always absolute — in another worktree of the same repo, the same relative path is a different file.
 

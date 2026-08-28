@@ -77,7 +77,7 @@ fi
 # receiving agent where the task came from and where to write the answer, so it can
 # report back on its own instead of leaving the dispatcher to poll.
 if [[ -n "$SENDER" ]]; then
-  FOOTER="[dispatched from tmux pane ${SENDER}. That document is the task -- read it; this message is only the pointer. When you finish, get blocked, or need a decision, append a \"## Report\" section to the same document and notify ${SENDER} using your tmux-reply skill.]"
+  FOOTER="[dispatched from tmux pane ${SENDER}. That document is the task -- read it; this message is only the pointer. When you finish, get blocked, or need a decision, append a \"## Report\" section to the same document and notify ${SENDER} using your tmux-reply skill, whose status line must start with DONE:, BLOCKED: or QUESTION:.]"
 else
   FOOTER="[dispatched by an agent outside tmux -- read that document for the task; no reply channel available.]"
 fi

@@ -1,19 +1,22 @@
 #!/usr/bin/env bash
-# reply.sh - Tell the dispatching pane that your report is in the channel document.
-# Usage: reply.sh <pane_id> <doc_path> [verdict]
+# reply.sh - Tell the dispatching pane your status, and where the report is.
+# Usage: reply.sh <pane_id> <doc_path> <status>
 #   pane_id   %5 | 5 | session:window.pane  (the dispatcher's pane)
 #   doc_path  the same channel document the task arrived in, with your report appended
-#   verdict   optional one line, e.g. "DONE: ..."; the document carries the evidence
+#   status    required one line: "DONE: ..." | "BLOCKED: ..." | "QUESTION: ..."
 #
-# The report itself never travels through tmux -- it is appended to the document
-# both agents already share, so the dispatcher can re-read it, quote it, and check
-# the deliverable against the original brief sitting right above it.
+# Exactly two things travel through tmux: the status line and the document path.
+# The status is what the dispatcher acts on -- closing the task, unblocking you, or
+# answering -- and it has to be readable without opening a file. Everything behind
+# it (diffs, commands, evidence, what you skipped) is appended to the document both
+# agents already share, so the dispatcher can re-read it, quote it, and check the
+# deliverable against the original brief sitting right above it.
 
 set -euo pipefail
 
-TARGET_ARG="${1:?Usage: reply.sh <pane_id> <doc_path> [verdict]}"
-DOC_ARG="${2:?Usage: reply.sh <pane_id> <doc_path> [verdict]}"
-VERDICT="${3:-}"
+TARGET_ARG="${1:?Usage: reply.sh <pane_id> <doc_path> <status>}"
+DOC_ARG="${2:?Usage: reply.sh <pane_id> <doc_path> <status>}"
+STATUS="${3:?Usage: reply.sh <pane_id> <doc_path> <status>  (status must start with DONE: / BLOCKED: / QUESTION:)}"
 
 # A bare number is shorthand for a pane id; anything else (%5, dev:1.2) passes through.
 if [[ "$TARGET_ARG" =~ ^[0-9]+$ ]]; then
@@ -69,34 +72,42 @@ if ! printf '%s' "$LAST_HEADING" | grep -qiE '^##[[:space:]]+(report|回报)'; t
   exit 1
 fi
 
-# The verdict is a label, not the report: one short line so the dispatcher can
-# triage at a glance and read the substance in the document.
-if [[ -n "$VERDICT" ]]; then
-  VERDICT="$(printf '%s' "$VERDICT" | tr '\n\r\t' '   ')"
-  if (( ${#VERDICT} > 160 )); then
-    VERDICT="${VERDICT:0:160}..."
-  fi
-  case "$VERDICT" in
-    DONE:*|BLOCKED:*|QUESTION:*) ;;
-    *) echo "Warning: verdict does not start with DONE: / BLOCKED: / QUESTION: -- the dispatcher's next move differs for each." >&2 ;;
-  esac
+# The status is a headline, not the report: one short line, and it must open with
+# one of three words. The prefix is not decoration -- it is the whole triage: DONE
+# lets the dispatcher close the task, BLOCKED means the task is stalled and needs
+# it to act, QUESTION means it owes an answer before anything else moves. A status
+# that starts with anything else forces the dispatcher to open the document just to
+# find out whether the work is finished, which is what this line exists to avoid.
+STATUS="$(printf '%s' "$STATUS" | tr '\n\r\t' '   ')"
+case "$STATUS" in
+  DONE:*|BLOCKED:*|QUESTION:*) ;;
+  *)
+    echo "Error: status must start with 'DONE:', 'BLOCKED:' or 'QUESTION:' (got: $STATUS)." >&2
+    echo "That prefix is how the dispatcher decides its next move without opening the document." >&2
+    exit 1
+    ;;
+esac
+if (( ${#STATUS} > 160 )); then
+  STATUS="${STATUS:0:160}..."
 fi
 
 # Note what this footer does NOT say: it carries no instruction to reply. The
 # dispatcher's pane treats any incoming message as a fresh turn, so an invitation
 # to respond would set two agents acknowledging each other indefinitely.
 if [[ -n "$SENDER" ]]; then
-  FOOTER="[reply from tmux pane ${SENDER}, re: the task you dispatched. The report is the last \"## Report\" section of that document.]"
+  FOOTER="[reply from tmux pane ${SENDER}, re: the task you dispatched. The status line above is the outcome; the evidence behind it is the last \"## Report\" section of that document.]"
 else
-  FOOTER="[reply from a dispatched agent. The report is the last \"## Report\" section of that document.]"
+  FOOTER="[reply from a dispatched agent. The status line above is the outcome; the evidence behind it is the last \"## Report\" section of that document.]"
 fi
 
-# Bracketed paste (-p) keeps the multi-line pointer intact; without it every newline
-# reads as a submit and the message arrives as a series of stray fragments.
+# Status on the first line -- it is what the dispatcher acts on, so it should be
+# the first thing its next turn reads. Bracketed paste (-p) keeps the two lines
+# together; without it every newline reads as a submit and the message arrives as
+# a series of stray fragments, each one starting a turn of its own.
 BUF="tmux-reply-$$"
 {
+  printf '%s\n' "$STATUS"
   printf 'Report in: %s\n' "$DOC"
-  if [[ -n "$VERDICT" ]]; then printf '%s\n' "$VERDICT"; fi
   printf '\n%s\n' "$FOOTER"
 } | tmux load-buffer -b "$BUF" -
 tmux paste-buffer -p -r -b "$BUF" -t "$TARGET"
@@ -108,7 +119,7 @@ sleep 0.5
 tmux send-keys -t "$TARGET" Enter
 
 sleep 1
-echo "Replied to ${TARGET}."
+echo "Replied to ${TARGET}: ${STATUS}"
 echo "Report in: ${DOC}"
 echo "--- last lines of ${TARGET} ---"
 tmux capture-pane -p -t "$TARGET" | awk 'NF' | tail -n 6
