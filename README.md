@@ -36,6 +36,7 @@ Install the plugins you need:
 /plugin install code-kit@ai-kit
 /plugin install learning@ai-kit
 /plugin install self-learn@ai-kit
+/plugin install sdd@ai-kit
 ```
 
 After installation, restart Claude Code. Skills will be available with the plugin prefix:
@@ -112,6 +113,20 @@ Personal learning and note-taking aids.
 |-------|---------|
 | `learning:learn` | Explain concepts with minimal examples, code analogies, and simplification |
 | `learning:take-note` | Generate structured learning notes with runnable code examples |
+
+### sdd
+
+Spec-driven workflow: requirements (REQ) hold the current conclusions, change requests (CR) hold item-level deltas, implementation specs live beside three-stage reviews under a per-CR working folder. Deterministic parts (numbering, scaffolding, validation, index) run through a stdlib-only Python script. Docs are written in Chinese.
+
+| Skill | Purpose |
+|-------|---------|
+| `sdd:sdd` | Status of all REQ / CR and the next step; validate; regenerate index |
+| `sdd:draft` | Read-only exploration before a REQ / CR; facts with file:line |
+| `sdd:req` | Capture a business's current logic as a numbered REQ (FR / BR / AC) |
+| `sdd:create-cr` | Open a CR: a change CR (item-level delta against an existing REQ) or a charter CR for a brand-new capability |
+| `sdd:spec` | Write the implementation spec: recon with file:line, then plan, steps, tests, rollout |
+| `sdd:implement-cr` | Do the next thing: address findings, TDD implementation per step, finalize REQ |
+| `sdd:review-cr` | docs / spec / impl reviews with reproducible findings and dispositions; `distill` folds lessons into `lessons.md` and prunes the review files |
 
 ### self-learn
 

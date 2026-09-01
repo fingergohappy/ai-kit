@@ -49,6 +49,12 @@
       "source": "./plugins/wikijs",
       "description": "Query, search, publish, and update pages on the internal Wiki.js knowledge base via GraphQL API",
       "category": "Productivity"
+    },
+    {
+      "name": "sdd",
+      "source": "./plugins/sdd",
+      "description": "Spec-driven workflow for requirements (REQ), change requests (CR), implementation specs, and three-stage reviews; conclusions live in REQ, argumentation in reviews",
+      "category": "Coding"
     }
   ]
 }
