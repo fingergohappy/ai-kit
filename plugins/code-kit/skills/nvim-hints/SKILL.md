@@ -1,6 +1,6 @@
 ---
 name: nvim-hints
-description: Visualize code paths inside the user's running Neovim instance — populate the quickfix list with the ordered steps of a call chain and add virtual text explanations at each location. Use this whenever the user provides an nvim socket path, or asks to trace/mark/annotate a call path, request flow, or code chain "in nvim/vim/the editor", mentions qflist/quickfix or virtual text, or wants to see how a request or function flows through the code inside their editor — even if they never say the word "annotate".
+description: Visualize code paths inside the user's running Neovim instance — populate the quickfix list with the ordered steps of a call chain and add virtual text explanations at each location. Use this whenever the user provides an nvim socket path, or asks to trace/mark/annotate a call path, request flow, or code chain "in nvim/vim/the editor", mentions qflist/quickfix or virtual text, or wants to see how a request or function flows through the code inside their editor — "梳理一下这个调用链", "在 nvim 里标注出来", "看看这个请求是怎么一路走下来的", "用 qflist 列一下" — even if they never say the word "annotate".
 ---
 
 # nvim-hints: Annotate code paths in Neovim
