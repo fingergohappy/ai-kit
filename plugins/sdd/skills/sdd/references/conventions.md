@@ -118,7 +118,7 @@ review: to fix -> fixing -> fixed -> (CR fixed 后) 提炼进 lessons.md -> 删�
 /review-cr CR-NNN docs 审 CR + REQ delta                     -> reviews/01-docs.md
 /spec CR-NNN           写实施 spec (先侦察 file:line)         -> notcommit/CR-NNN-*/spec.md
 /review-cr CR-NNN spec 审实施计划                             -> reviews/02-spec.md
-/implement-cr CR-NNN   按 spec 分步实施 (TDD), 每步一提交, 填落点   [CR: fixing]
+/implement-cr CR-NNN   按 spec 分步实施 (TDD), 提交可跨步, 填落点   [CR: fixing]
 /review-cr CR-NNN impl 审实现                                 -> reviews/03-impl.md
 /implement-cr CR-NNN   落实: 更新 REQ 正文 + 变更记录, CR 置 fixed, 重生成 INDEX
 /review-cr CR-NNN distill  提炼教训进 lessons.md, 清理工作目录      -> lessons.md   [notcommit/CR-NNN-* 删除]
@@ -131,6 +131,119 @@ review: to fix -> fixing -> fixed -> (CR fixed 后) 提炼进 lessons.md -> 删�
 都只读代码, 只写文档 -- 想只要方案不要改动时, 停在 `/spec` 即可.
 
 review 是软闸门: 跳过某次 review 直接往下走需要人明确说 "跳过", AI 不自行跳过.
+
+**六个命令里只有 review 能并行**. 三次 review 的车道之间本来就互斥, 可以一个车道派一个 agent
+并行审再合成一份 (怎么做见 `review-cr` 的 `## 并行审`). 用不用并行**在 `/create-cr` 立 CR 时问
+用户一次**, 答案写进工作目录的 `.parallel` (`yes` / `no`, notcommit 不入库, `sdd.py status` 会
+显示); 三次 review 都读它, 不重问 -- 三次 review 横跨好几天好几个会话, 每次问就是每次打断.
+环境不支持 (没 tmux, 或 codex / pi 都不在 PATH) 就不问也不写, 读不到即串行.
+`/draft` `/req` `/create-cr` `/spec` `/implement-cr` 都是串行的活: spec 是一份连贯文档, 拆开写
+会互相矛盾; 分步实施前后依赖, 并行只会制造冲突, 真要并行写还得先做 worktree 隔离.
+
+## 提交
+
+**只有代码改动值得单独一个提交.** 文档不占提交: `notcommit/` 下的 spec / review / draft 本来
+就不入库; 入库的 REQ / CR 搭在同一分支的代码提交里走 (落实那一步与 REQ 更新同一个提交), 不要
+为 "写完 CR" "审完 docs" 单独提交一次 -- 那两步没有代码, 提交里只有文档, 合进主干就是纯噪音.
+
+**一个提交可以覆盖连续几步**, 前提是这几步的回退单元一体; 一个提交不能只做半步. 详见
+`implement-cr` 的分步实施那节.
+
+**一轮 review 的修复合一个提交.** 逐条发现各提交一次会让一个 CR 堆出十几个 `fix:` --
+处置列各条填同一个 hash 即可, 那是它们同批修掉的记录. P0 与其余分开提交是允许的例外
+(P0 常要单独回退).
+
+### 压缩提交 (squash)
+
+**只压没 push 过的提交.** 边界是 push 不是 main: push 出去就该当共享的看 -- 别人可能已经拉了,
+或者在 PR 里逐个提交读过并引用了 hash, 改写要 force push, 代价不对称. 已经进了 main 的更是
+到此为止, 只能往前加提交, 不能回头改写.
+
+时机是**三次 review 都 fixed, 落实之前**. 不是怕压两次麻烦, 是 review 处置列里的
+`修复 <hash>` 正是复核人 (`/review-cr` 第 6 步) 用来核 "这条发现真的修了没有" 的凭据 --
+复核还没做完就把那些 hash 压没了, 复核就无从下手, 只能凭处置栏那句自述. 落实之前压完, 三处
+hash 一次换对, CR 第 5 节填的就是最终值.
+
+**这个窗口只在代码还攒在分支上时存在.** 边做边合的节奏 (实施提交随做随进主干, CR 还在 fixing
+就已经 merge 了) 根本等不到它 -- impl review 复核完的时候代码早在 main 上, 只能往前加提交.
+那种节奏下提交数只能从源头控: 提交可跨步, 一轮 review 的修复合一个提交. 想留压缩的余地, 就得
+让一个 CR 的实施提交攒在自己的分支上, 落实之后连同文档一起合.
+
+压完必须做三件事, 少一件就有指向不存在的提交的 hash:
+
+1. `spec.md` §4 落点列的 hash 换成压缩后的
+2. 三份 review 处置列里的 `修复 <hash>` 换成压缩后的
+3. CR 第 5 节 "实现提交" 换成压缩后的
+
+**每个压出来的提交要自己说清干了什么** -- 一句话, 按项目自己的提交约定写, 不塞 CR 编号与步号.
+`fix(paymenttracking): close the four P0s the implementation review found` 这样就够了: 读的人
+知道这是什么修复, 不需要 "CR-019 step 11" 才看得懂. 压缩是为了让主干读得懂, 压完只剩一句
+`wip` 或一堆 `fix` 摞在一起, 白压.
+
+## 业务决策: 谁拍板, 什么时候问
+
+**先分清三类**, 处理方式完全不同:
+
+| 类型 | 例子 | 怎么办 |
+|---|---|---|
+| 技术选择 | 用哪个实现, 分几步, 表怎么建 | 自己定, 理由写进 spec §6 或 CR 第 4 节. 不问, 不记 OQ |
+| **业务决策** | 规则没定, 边界没说, 两种读法都说得通, **会改变验收标准** | 见下 |
+| review 发现 | 审出来的 bug, 漏测, 与 AC 不符 | 直接修, 不问 (见 `review-cr` / `implement-cr`) |
+
+**业务决策再看它定没定过**:
+
+- **CR 里已经和用户确认过** -> 照 CR 执行, **不记 OQ, 不重问**. 已经拍过板的事不是开放问题,
+  再问一遍是让用户为同一件事拍两次板.
+- **CR 里没定** (新冒出来的歧义) -> 取决于当前是不是被授权自动推进:
+
+| 何时 | 遇到未定的业务决策 |
+|---|---|
+| `/auto-cr` | 按自己推荐的做法执行 + 在 REQ 第 10 节记一条 OQ, 往下走 |
+| 用户说了 "推进到 X" / "一路做到 X" / "别问我" | **同上** -- 那句话就是授权, 记 OQ 往下走, 不要逐个打断 |
+| 普通逐步模式 (用户没给这种话) | **停下来问用户**. 这一条只管业务决策, 不要顺手把 review 发现也拿去问 |
+
+OQ 的四段格式 (问题 / 已按 / 理由 / 影响) 见 `auto-cr` 的 "歧义" 节, 缺 "影响" 那段用户没法判断
+改判代价, OQ 就成了没人敢碰的悬案.
+
+**无论哪种模式都必须当场停**的越权项: 要动 CR 影响范围之外的 REQ 条目; 要改已 fixed 的 review
+的结论; 要跳过某次 review; 迁移会销毁审计数据. 这几样代价不对称, 记 OQ 往下走等于把错误做实.
+
+### CR 已确认的逻辑 > review 的意见
+
+review 的 agent (尤其是派出去的 codex / pi) 读不到你和用户之前的讨论, 会把**用户已经拍板的设计**
+当成缺陷报上来. 这类发现**不改代码**: 处置写 `不采纳: CR 第 N 节已确认 <那条决策>`, 复核照此认.
+
+判断标准是 CR / REQ 里有没有白纸黑字: 有, 以它为准 -- 用户的决策不因为一个审查者不同意就失效;
+没有, 那才是真发现, 该修就修. 真觉得用户那条决策错了, 是**提出来让用户改 CR**, 不是绕过它改代码.
+
+## 每推进一步就贴进度
+
+做完任何一件让状态变化的事 -- 建了 review, 写完 spec, 提交了一步, 处置完发现, 置了 fixed --
+立刻跑一次 `sdd.py status CR-NNN --write`, **把进度表原样贴出来**, 再做下一件.
+
+`--write` 会把同一份表落进工作目录的 `PROGRESS.md`. 这一份是给人看的: 用户想知道走到哪了,
+不必回头翻聊天记录, 也不必开口问 agent, 打开那个文件就是最新的. 它是生成物, 每次覆写,
+所以**不许手工编辑, 也不许 agent 用自然语言往里补写** -- 手写的进度和勾一样会骗人.
+
+进度表是这样的 (八关, 走过的 ✓, 当前的 →, 还没轮到的 ·):
+
+```
+  进度: 4/8
+    ✓ 1 立项    CR-010 [fixing]
+    ✓ 2 docs审  01-docs.md [fixed]
+    ✓ 3 spec    spec.md 4 步
+    ✓ 4 spec审  02-spec.md [fixed]
+    → 5 实施    2/4 步已提交, 2 步待办
+      · 6 impl审  审代码
+      · 7 落实    REQ→implemented, CR→fixed
+      · 8 提炼    提炼进 lessons.md, 清工作目录
+```
+
+每关后面是脚本从文件里读出来的证据 (文件名 + frontmatter 状态 + 未处置发现数 + 填了 hash 的步数),
+所以**不要自己复述 "第 5 步做完了"** -- 自述和勾一样不可验证, 贴脚本输出用户看到的才是磁盘上的事实.
+一步一贴还顺带把没落盘的活当场照出来: 该变 ✓ 的关没变, 说明上一步只写进了 agent 的上下文.
+
+贴完别再用自然语言把八行重讲一遍. 要补的只有进度表说不出的那部分 -- 这一步为什么这么做, 遇到了什么.
 
 ## 两种 CR: 变更与立项
 
@@ -177,7 +290,7 @@ validate 认的是 `**AC-n** (来源)` 这个形状, 去掉括号它会判定条
 ## 工具
 
 ```
-python3 <skills>/sdd/scripts/sdd.py status [CR-NNN]   # 状态与下一步
+python3 <skills>/sdd/scripts/sdd.py status [CR-NNN]   # 状态; 给 CR 时出八关进度表与下一步
 python3 <skills>/sdd/scripts/sdd.py validate          # 一致性检查 (CI 可用, 有错退出 1)
 python3 <skills>/sdd/scripts/sdd.py index             # 重生成 INDEX.md
 ```

@@ -18,13 +18,20 @@ description: >-
 
 1. 定位脚本: 本文件所在目录下的 `scripts/sdd.py`. 用 `python3` 跑, 只依赖标准库.
 2. `python3 <此目录>/scripts/sdd.py status` -- 列出全部 REQ / CR, 每个 CR 的 review 状态和下一步命令.
-   带参数 `status CR-NNN` 看单个 CR 的细节.
+   (`status CR-NNN --write` 另把这份表落进该 CR 工作目录的 `PROGRESS.md`, 给人随时翻.)
+   带参数 `status CR-NNN` 出这个 CR 的**八关进度表**: 走过哪几关 (✓), 卡在哪 (→), 后面还剩什么 (·),
+   每关后面跟的是文件里读出来的证据 (文件名 + frontmatter 状态 + 未处置发现数 + 已填 hash 的步数).
 3. 用户要查一致性: `sdd.py validate` (有错退出码 1, 可挂 CI). 逐条解释输出, 错误先于警告.
 4. 用户要更新索引: `sdd.py index`. INDEX.md 是生成物, 手改会被覆盖.
 5. `docs/sdd` 不存在时: 先问是否初始化 (`sdd.py init` 会建目录, INDEX, 和 notcommit 的 .gitignore;
    不生成 README, 约定只在本 skill), 不要在用户没确认的情况下往仓库里加目录.
 
 把 `status` 的 "下一步" 原样告诉用户 -- 它是由文件状态推出来的, 比记忆可靠.
+
+**进度表里没有勾**. 每一关过没过是脚本读文件算的 (review 的 frontmatter `status` 与处置列,
+spec §4 表里填没填提交 hash), 不是 agent 自述. 所以换个会话接手, 或者自动推进跑了半天回头看,
+跑一次 `status CR-NNN` 就够 -- 不要凭上下文里的记忆判断做到哪了, 那是唯一会骗人的来源.
+这与 "落点填提交 hash 不填勾" 是同一条约定: 进度表本身也不许有勾.
 
 ## 约定 (六个命令共同遵守)
 
@@ -41,6 +48,8 @@ description: >-
 - **review 是软闸门**. 下一阶段发现上一阶段 review 缺失或未 fixed 时, 停下来说明; 只有
   用户明确说 "跳过" 才继续.
 - **落点填提交 hash 不填勾**. 提交可验证, 勾是自述.
+- **每推进一步就跑 `status CR-NNN --write`**: 贴进度表给用户, 同时落进工作目录的 `PROGRESS.md`
+  (人随时翻, 不必开口问). 不要自己复述做到哪了 -- 自述和勾一样不可验证.
 - **状态在 frontmatter 里**, 不在正文表格. 值含 `": "` 或以 `[{&*!|>%@` 开头必须加引号 (或用 `>-`),
   否则标准 YAML 解析器会读错; `summary` 一律 `>-`. `validate` 会扫这类值.
 
@@ -54,7 +63,7 @@ review: to fix -> fixing -> fixed
 
 ```
 /draft -> /req -> /create-cr -> /review-cr docs -> /spec -> /review-cr spec
-       -> /implement-cr (TDD 实施, 每步一提交) -> /review-cr impl
+       -> /implement-cr (TDD 实施, 提交可跨步) -> /review-cr impl
        -> /implement-cr (落实 REQ, CR fixed) -> /review-cr distill (提炼进 lessons.md, 清理工作目录)
 ```
 

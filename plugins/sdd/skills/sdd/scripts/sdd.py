@@ -7,7 +7,8 @@
 
 子命令:
   init                    建目录 + INDEX + notcommit/.gitignore (约定只在 skill 里, 不放 README)
-  status [CR-NNN]         全局状态; 给 CR 时输出该 CR 的下一步
+  status [CR-NNN] [--write]  全局状态; 给 CR 时输出 8 关的进度表 (每关带文件证据) 与下一步;
+                          --write 另把这份表写进工作目录的 PROGRESS.md
   next-id REQ|CR          下一个可用编号
   new-req <slug> [标题]    从模板建 REQ
   new-cr <slug> [标题] [--new]   从模板建 CR (--new: 新增业务的立项 CR; 不带则是变更 CR).
@@ -29,6 +30,7 @@ import re
 import shutil
 import subprocess
 import sys
+import unicodedata
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 TEMPLATES = os.path.normpath(os.path.join(HERE, "..", "assets", "templates"))
@@ -540,8 +542,12 @@ def cr_state(root, cr):
     """收集一个 CR 的全部状态, 供 status / index 用."""
     info = parse_cr(cr["path"])
     d = cr_dir(root, cr["id"])
-    st = {"cr": cr, "status": info["status"], "dir": d, "spec": None, "reviews": {}}
+    st = {"cr": cr, "status": info["status"], "dir": d, "spec": None, "reviews": {},
+          "parallel": None}
     if d:
+        pf = os.path.join(d, ".parallel")
+        if os.path.isfile(pf):
+            st["parallel"] = read(pf).strip().lower() == "yes"
         sp = os.path.join(d, "spec.md")
         if os.path.isfile(sp):
             st["spec"] = spec_steps(sp)
@@ -586,10 +592,106 @@ def next_step(st):
     if total == 0:
         return "/spec %s" % cid, "spec §4 分步表为空或格式不对 (需要 `| 步 | 内容 | 合并即生效? | 落点 |`)"
     if pending:
-        return "/implement-cr %s" % cid, "实施: %d/%d 步待办 (每步一个提交, 落点填提交 hash)" % (pending, total)
+        return "/implement-cr %s" % cid, "实施: %d/%d 步待办 (落点填提交 hash; 回退单元一体的连续几步可共用一个提交)" % (pending, total)
     if "impl" not in rv:
         return "/review-cr %s impl" % cid, "全部步骤已落地, 实现还没审过"
     return "/implement-cr %s" % cid, "落实: 更新 REQ 正文与变更记录, CR 置 fixed, 重生成 INDEX"
+
+
+def _dw(s):
+    """终端显示宽度: CJK 占 2 列. 关卡名中英混排, 不算宽度对不齐."""
+    return sum(2 if unicodedata.east_asian_width(c) in "WF" else 1 for c in s)
+
+
+def _pad(s, n):
+    return s + " " * max(0, n - _dw(s))
+
+
+def _gate_review(rv, stage):
+    """一个 review 关: (过没过, 证据). 证据从文件读, 不是自述."""
+    r = rv.get(stage)
+    if not r:
+        return False, ""
+    f = STAGE_FILE[stage]
+    if r["status"] == "fixed":
+        return True, "%s [fixed]" % f
+    if r["open"]:
+        return False, "%s [%s] %d 条未处置 (%s)" % (
+            f, r["status"], len(r["open"]), ", ".join(r["open"][:4]))
+    return False, "%s [%s] 发现已处置, 待复核" % (f, r["status"])
+
+
+def checklist(st):
+    """把 next_step 的状态机摊平成关卡表: [(序号, 名, 态, 证据)], 态为 done/cur/todo.
+
+    每关的证据都是从文件里读出来的 (文件在不在, frontmatter 的 status, 表格里填没填
+    提交 hash), 没有一项靠 agent 自述 -- 与 "落点填提交 hash 不填勾" 同一条约定.
+    当前关 = 第一个没过的关, 所以它与 next_step 的判断必然一致.
+    """
+    rv = st["reviews"]
+    rows = [("立项", True, "%s [%s]" % (st["cr"]["id"], st["status"]), "")]
+
+    rows.append(("docs审",) + _gate_review(rv, "docs") + ("审 CR 与 REQ delta",))
+
+    if st["spec"] is None:
+        rows.append(("spec", False, "", "写实施 spec (先侦察, 结论带 file:line)"))
+    elif st["spec"][0] == 0:
+        rows.append(("spec", False, "spec.md §4 分步表为空或格式不对", ""))
+    else:
+        rows.append(("spec", True, "spec.md %d 步" % st["spec"][0], ""))
+
+    rows.append(("spec审",) + _gate_review(rv, "spec") + ("审实施计划",))
+
+    if st["spec"] is None or st["spec"][0] == 0:
+        rows.append(("实施", False, "", "TDD 分步实施, 提交可跨步"))
+    else:
+        total, pending = st["spec"]
+        rows.append(("实施", pending == 0, "%d/%d 步已提交%s" % (
+            total - pending, total, ", %d 步待办" % pending if pending else ""), ""))
+
+    rows.append(("impl审",) + _gate_review(rv, "impl") + ("审代码",))
+
+    fixed = st["status"] == "fixed"
+    # 只报 CR 自己的状态: REQ 有没有真的置 implemented 由 validate 查 (它读得到 REQ),
+    # 这里说 "REQ 已置 implemented" 就成了没验证过的自述.
+    rows.append(("落实", fixed, "CR [fixed]" if fixed else "", "REQ→implemented, CR→fixed"))
+
+    undistilled = [s for s in STAGES if s in rv and not rv[s]["distilled"]]
+    if not fixed:
+        rows.append(("提炼", False, "", "提炼进 lessons.md, 清工作目录"))
+    elif undistilled:
+        rows.append(("提炼", False, "%d 份 review 待提炼进 lessons.md" % len(undistilled), ""))
+    else:
+        rows.append(("提炼", True, "已提炼, 工作目录可清 (prune)" if rv else "无 review 文件", ""))
+
+    out, seen_cur = [], False
+    for i, (name, ok, ev, hint) in enumerate(rows, 1):
+        if ok:
+            state = "done"
+        elif not seen_cur:
+            state, seen_cur = "cur", True
+        else:
+            state = "todo"
+        # 有证据就报证据, 没有才说这关要干什么 -- 与它排在当前关前后无关.
+        # 跳步跑出来的 CR (docs 审没过就实施完了) 全靠这条: 那几关虽然标 todo,
+        # review 文件却已经在了, 用 hint 盖掉真实状态等于把跳步藏起来.
+        out.append((i, name, state, ev or hint))
+    return out
+
+
+MARK = {"done": "✓", "cur": "→", "todo": "·"}
+
+
+def fmt_checklist(st):
+    """关卡表渲染成几行. rejected 的 CR 链条已中断, 调用方不该走到这里."""
+    rows = checklist(st)
+    done = sum(1 for _, _, s, _ in rows if s == "done")
+    out = ["  进度: %d/%d" % (done, len(rows))]
+    for i, name, state, ev in rows:
+        # todo 项多缩进两格: 还没轮到它, 视觉上退到后面
+        indent = "      " if state == "todo" else "    "
+        out.append(("%s%s %d %s %s" % (indent, MARK[state], i, _pad(name, 7), ev)).rstrip())
+    return out
 
 
 def fmt_reviews(st):
@@ -603,6 +705,46 @@ def fmt_reviews(st):
     return " ".join(parts)
 
 
+PROGRESS_FILE = "PROGRESS.md"
+
+
+def render_cr_status(root, cr, st=None):
+    """单个 CR 的状态文本. 打印的与 --write 落盘的是同一份, 不会各说一套."""
+    st = st or cr_state(root, cr)
+    info = parse_cr(cr["path"])
+    out = ["%s %s  [%s]%s" % (cr["id"], info["title"], st["status"],
+                              "  (立项 CR)" if info["kind"] == "charter" else ""),
+           "  影响需求: " + (", ".join("%s(%s)" % (k, ",".join(sorted(v)) or "全文")
+                                       for k, v in info["affects"].items()) or "(空!)"),
+           "  工作目录: " + (st["dir"] or "(无)")]
+    if st["parallel"] is not None:
+        out.append("  review 策略: " + ("并行 (按车道派给 codex / pi)" if st["parallel"] else "串行 (自审)"))
+    if st["status"] == "rejected":
+        # 链条已中断, 摊平的关卡表会误导 (后面几关永远不会走)
+        out.append("  spec: " + ("无" if st["spec"] is None else "%d 步, %d 待办" % st["spec"]))
+        out.append("  reviews: " + fmt_reviews(st))
+    else:
+        out += fmt_checklist(st)
+    act, why = next_step(st)
+    out += ["  下一步: %s" % act, "    -- %s" % why]
+    return "\n".join(out)
+
+
+def write_progress(root, cr, st=None):
+    """把进度表落进 CR 工作目录, 供人随时翻 (不必问 agent, 也不必自己跑脚本).
+
+    生成物, 不是勾: 每次由 cr_state 重算覆写. notcommit 下不入库, prune 会清掉.
+    """
+    st = st or cr_state(root, cr)
+    if not st["dir"]:
+        return None
+    path = os.path.join(st["dir"], PROGRESS_FILE)
+    write(path, "# %s 进度\n\n由 `sdd.py status %s --write` 生成, 不要手工编辑 -- 每一关的状态都\n"
+                "是脚本从文件读出来的 (review 的 frontmatter, spec §4 填了 hash 的步数), 手改只会骗自己.\n"
+                "\n```\n%s\n```\n" % (cr["id"], cr["id"], render_cr_status(root, cr, st)))
+    return path
+
+
 def cmd_status(args):
     root = need_root(args)
     if args.cr:
@@ -610,15 +752,10 @@ def cmd_status(args):
         if not cr:
             die("没有这个 CR: %s" % args.cr)
         st = cr_state(root, cr)
-        info = parse_cr(cr["path"])
-        print("%s %s  [%s]%s" % (cr["id"], info["title"], st["status"],
-                                  "  (立项 CR)" if info["kind"] == "charter" else ""))
-        print("  影响需求:", ", ".join("%s(%s)" % (k, ",".join(sorted(v)) or "全文") for k, v in info["affects"].items()) or "(空!)")
-        print("  工作目录:", st["dir"] or "(无)")
-        print("  spec:", "无" if st["spec"] is None else "%d 步, %d 待办" % st["spec"])
-        print("  reviews:", fmt_reviews(st))
-        act, why = next_step(st)
-        print("  下一步: %s  -- %s" % (act, why))
+        print(render_cr_status(root, cr, st))
+        if args.write:
+            path = write_progress(root, cr, st)
+            print("  已写: %s" % (os.path.relpath(path, root) if path else "(无工作目录, 未写)"))
         return
     reqs = list_docs(root, "REQ")
     crs = list_docs(root, "CR")
@@ -868,6 +1005,12 @@ def cmd_prune(args):
         targets.append((os.path.join(d, "spec.md"), False))
     if "reviews" not in keep and os.path.isdir(rdir):
         targets.append((rdir, True))
+    pf = os.path.join(d, ".parallel")
+    if os.path.isfile(pf):
+        targets.append((pf, False))  # review 策略, CR 清理了就是孤儿
+    gp = os.path.join(d, PROGRESS_FILE)
+    if os.path.isfile(gp):
+        targets.append((gp, False))  # 进度表是生成物, 随时可再生
     if not targets:
         die("没有可删的 (--keep 留下了全部, 或工作目录已空)")
     files = []
@@ -905,7 +1048,10 @@ def main():
     _add = sub.add_parser
     sub.add_parser = lambda name, **kw: _add(name, parents=[common], **kw)
     sub.add_parser("init").set_defaults(fn=cmd_init)
-    s = sub.add_parser("status"); s.add_argument("cr", nargs="?"); s.set_defaults(fn=cmd_status)
+    s = sub.add_parser("status"); s.add_argument("cr", nargs="?")
+    s.add_argument("--write", action="store_true",
+                   help="把这个 CR 的进度表写进工作目录的 PROGRESS.md (人随时翻, 不必问 agent)")
+    s.set_defaults(fn=cmd_status)
     s = sub.add_parser("next-id"); s.add_argument("kind", choices=("REQ", "CR")); s.set_defaults(fn=cmd_next_id)
     s = sub.add_parser("new-req"); s.add_argument("slug"); s.add_argument("title", nargs="?"); s.set_defaults(fn=cmd_new_req)
     s = sub.add_parser("new-cr"); s.add_argument("slug"); s.add_argument("title", nargs="?")

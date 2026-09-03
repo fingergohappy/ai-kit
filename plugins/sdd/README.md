@@ -76,7 +76,9 @@ docs/sdd/
        -> /review-cr distill (提炼教训进 lessons.md, 清理工作目录)
 ```
 
-`sdd.py status CR-NNN` 随时告诉你下一步. `sdd.py validate` 可挂 CI.
+`sdd.py status CR-NNN` 出八关进度表 (走到哪 / 卡在哪 / 还剩什么) 加下一步命令, 每关的判据是
+文件里的证据而不是勾选, 所以 agent 换会话接手时跑一次就知道进度. `sdd.py validate` 查跨文档
+一致性, 可挂 CI.
 
 ## 目录
 
