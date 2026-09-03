@@ -1,7 +1,7 @@
 ---
 name: agent-crew
 description: |
-  Put outside CLI agents (codex, pi, ...) to work in a dedicated `agents` tmux session, one window each — whether that is handing one of them a job, splitting a job across several, having two solve the same problem independently, or having several review one artifact from different angles. Use whenever the user says "让 codex 去做这个", "让 codex 和 pi 一起做", "起个 agent 跑一下", "让 pi 也做一遍看看", "起几个 agent 分头审", "多角度并行 review", "一个车道一个模型", "开几个窗口跑", "fan this out", "have codex do it", "run these in parallel". Covers launching the windows so their thinking stays visible, the per-tool model flags, how work is split so the results compose, how writing agents are isolated so they don't destroy each other's work, and how the results are collected and checked. Writing and delivering each window's brief is `tmux-dispatch`'s job.
+  Put outside CLI agents (codex, pi, ...) to work in a dedicated `agents` tmux session, one window each — whether that is handing one of them a job, splitting a job across several, having two solve the same problem independently, or having several review one artifact from different angles. Use whenever the user says "让 codex 去做这个", "让 codex 和 pi 一起做", "起个 agent 跑一下", "让 pi 也做一遍看看", "起几个 agent 分头审", "多角度并行 review", "一个车道一个模型", "开几个窗口跑", "fan this out", "have codex do it", "run these in parallel". Covers launching the windows so their thinking stays visible, the per-tool model flags, how work is split so the results compose, how writing agents are isolated so they don't destroy each other's work, and how the results are collected and checked, and how camp is broken afterwards (ask before closing, so windows don't pile up). Writing and delivering each window's brief is `tmux-dispatch`'s job.
 argument-hint: "[<the work>] [<who: codex|pi|...>]"
 disable-model-invocation: false
 ---
@@ -107,3 +107,36 @@ Each window reports through `tmux-reply` and writes its own file. What you do wi
 - **Review** — merge the findings into one file. Keep the sharper statement when lanes overlap; don't average them. **The overall verdict is the strictest lane's verdict** — one BLOCK makes the whole review BLOCK, however many lanes came back OK.
 
 Report which windows ran, what each produced, and the merged outcome. A window that produced nothing is not a window that found nothing — it's one that didn't run, and saying so is the difference between "done, checked" and "never happened".
+
+## Breaking camp: ask before you close
+
+Once the results are in, verified, and relayed to the user, **ask whether those windows can go**
+instead of leaving them up by default:
+
+> codex-migrate and pi-arith have both finished and their results are collected. OK to kill them?
+
+Skip it once and it accrues. After a few rounds the `agents` session holds a dozen windows that
+finished days ago, `tmux list-windows` no longer tells you which one is still working and which is
+last week's corpse, and a new window is more likely to collide with a stale name.
+
+Ask rather than just closing, because the conversation inside a window is sometimes still worth
+something — the user may want to read the agent's reasoning, or take over that pane and keep
+pressing it. Closing loses that; the document `tmux-reply` wrote back holds only conclusions.
+
+On a yes, kill them one at a time:
+
+```sh
+tmux kill-window -t agents:codex-migrate
+tmux list-windows -t agents          # confirm what's left is still working
+```
+
+Don't bother removing an empty session — the next `has-session` reuses it.
+
+**Only close windows you launched.** The boundary is the `agents` session: crew windows are yours
+to start, so they're yours to clean up. A pane you sent work to with `tmux-dispatch` — that `%7` in
+the user's own layout, a session belonging to another project — **is never yours to touch**. You
+didn't start it, the user is working in it, and closing it upends someone else's desk. If you can't
+tell who started it, don't close it. Ask.
+
+Unattended flows like `/auto-cr` don't ask, they just kill — there's nobody to ask, and since each
+stage launches fresh windows, leftovers only pollute the next stage's context.

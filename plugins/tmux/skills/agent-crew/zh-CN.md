@@ -1,7 +1,7 @@
 ---
 name: agent-crew
 description: |
-  在专用的 `agents` tmux session 里让外部 CLI agent（codex、pi……）干活，一个 window 一个——不管是把一件事交给其中一个、把一件事拆给几个、让两个各做一遍同一道题作对照，还是让几个从不同角度审同一份东西。当用户说「让 codex 去做这个」「让 codex 和 pi 一起做」「起个 agent 跑一下」「让 pi 也做一遍看看」「起几个 agent 分头审」「多角度并行 review」「一个车道一个模型」「开几个窗口跑」时触发。本 skill 管的是：怎么把 window 起得能看见对方在想什么、各工具的模型参数、活怎么拆才不打架、写代码的 agent 怎么隔离才不互相毁、结果怎么收怎么验。每个 window 的任务书怎么写、怎么送，是 `tmux-dispatch` 的事。
+  在专用的 `agents` tmux session 里让外部 CLI agent（codex、pi……）干活，一个 window 一个——不管是把一件事交给其中一个、把一件事拆给几个、让两个各做一遍同一道题作对照，还是让几个从不同角度审同一份东西。当用户说「让 codex 去做这个」「让 codex 和 pi 一起做」「起个 agent 跑一下」「让 pi 也做一遍看看」「起几个 agent 分头审」「多角度并行 review」「一个车道一个模型」「开几个窗口跑」时触发。本 skill 管的是：怎么把 window 起得能看见对方在想什么、各工具的模型参数、活怎么拆才不打架、写代码的 agent 怎么隔离才不互相毁、结果怎么收怎么验、跑完怎么收摊（问一句再关，别让 window 越堆越多）。每个 window 的任务书怎么写、怎么送，是 `tmux-dispatch` 的事。
 argument-hint: "[<要干的活>] [<交给谁: codex|pi|...>]"
 disable-model-invocation: false
 ---
@@ -107,3 +107,32 @@ tmux list-panes -t agents:<名字> -F '#{pane_id}'
 - **审查**——把发现合进一份文件。车道之间有重叠时保留更锋利的那条表述，不要取平均。**整体结论取最严的那个车道**：只要有一条 BLOCK，整份 review 就是 BLOCK，不管另外几条报了多少个 OK。
 
 汇报时说清楚：跑了哪几个 window、各自产出了什么、合出来的结论是什么。**没有产出的 window 不是「审过没发现问题」的 window**，那是一个没跑起来的 window——把这件事说出来，才分得清「干完了并且验过」和「压根没发生」。
+
+## 收摊: 问一句再关
+
+结果收完、验过、转述给用户之后，**问一句这些 window 能不能关了**，别默认留着:
+
+> codex-migrate / pi-arith 两个 window 已经跑完并收了结果，可以 kill 掉吗?
+
+一轮不关就攒一轮。几次下来 `agents` session 里堆着十几个早就跑完的 window，
+下次 `tmux list-windows` 分不出哪个还在干活、哪个是上周的尸体，起新 window 时也更容易
+撞上一个名字相同的旧窗口。
+
+问而不是直接关，是因为窗口里那段对话有时还有用——用户可能要翻 agent 的推理过程，
+或者想直接接管那个 pane 继续追问。关掉就没了，`tmux-reply` 写回的文档里只有结论。
+
+用户点头就一个个 kill:
+
+```sh
+tmux kill-window -t agents:codex-migrate
+tmux list-windows -t agents          # 确认剩下的都还在干活
+```
+
+session 空了不用特意删，下次 `has-session` 会复用它。
+
+**只关自己起的 window.** 这条规矩的边界是 `agents` session: crew 的 window 由你起，所以由你收.
+用 `tmux-dispatch` 派给别处的 pane (用户自己布局里的那个 `%7`, 另一个项目的会话) **一律不动** ——
+那不是你起的，用户正用着，关掉就是掀了别人的桌子。分不清是谁起的就不关，问。
+
+`/auto-cr` 这类无人值守的流程不问, 直接 kill (没人可问, 而且它每阶段都新起窗口, 留着只会污染
+下一阶段的上下文).

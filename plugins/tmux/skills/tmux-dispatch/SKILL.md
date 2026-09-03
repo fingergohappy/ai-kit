@@ -15,6 +15,11 @@ Two rules shape everything below.
 
 **Deliver, then stop.** This skill does not watch the other pane, and must not — polling `capture-pane` in a loop burns your turn on a screen only the other agent can advance. Every dispatch carries a stamp with your pane id and an instruction to append the report to the same document, then knock back with one line starting `DONE:`, `BLOCKED:` or `QUESTION:`. That line is what wakes you: you learn the outcome without opening anything, and open the document only when you need the evidence behind it. The other agent knocks when it's done; you stay free in the meantime.
 
+**And don't close their pane either.** The pane you dispatched to is a window in the user's own
+layout — you didn't start it, and finishing the task doesn't make it yours. The windows that need
+breaking down afterwards are the ones `agent-crew` launched in the `agents` session (see its
+"breaking camp" section); not this one.
+
 ## Resolve the pane id
 
 The pane id is always explicit, taken from `$ARGUMENTS` (`%7 …`, `7 …`) or from what the user just said ("让 7 去修这个", "发给 %3"). A bare number means `%<number>`.
