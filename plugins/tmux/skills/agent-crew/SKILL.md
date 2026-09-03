@@ -104,7 +104,7 @@ Each window reports through `tmux-reply` and writes its own file. What you do wi
 
 - **Delegate / split** — a report saying `DONE` is a claim, not evidence. Read the diff and run the tests yourself before you relay it as finished. An agent that hit something it couldn't solve and worked around it will report done, honestly, and never mention the workaround unless the brief asked what it skipped.
 - **Duplicate** — compare the two solutions and say which you're taking and why. Where they diverge is the interesting part; the divergence usually marks the spot where the problem was actually hard.
-- **Review** — merge the findings into one file. Keep the sharper statement when lanes overlap; don't average them. **The overall verdict is the strictest lane's verdict** — one BLOCK makes the whole review BLOCK, however many lanes came back OK.
+- **Review** — **a finding is a claim, not a fact.** Check it yourself before merging: is that `file:line` really there, does the code really read that way, does the rule it cites actually say that? Drop what doesn't hold up and leave a trace (how many were dropped and why); downgrade and mark "unverified" what you can't check right now. Taking them on faith means changing correct code on the strength of a false finding. Then merge into one file: keep the sharper statement when lanes overlap, don't average them. **The overall verdict is the strictest lane's verdict** — one BLOCK makes the whole review BLOCK, however many lanes came back OK.
 
 Report which windows ran, what each produced, and the merged outcome. A window that produced nothing is not a window that found nothing — it's one that didn't run, and saying so is the difference between "done, checked" and "never happened".
 
@@ -131,6 +131,13 @@ tmux list-windows -t agents          # confirm what's left is still working
 ```
 
 Don't bother removing an empty session — the next `has-session` reuses it.
+
+**Review windows come down later.** A review isn't over when the findings land: they get fixed, and
+then the agent **that raised them** should check the fix (anyone else has to re-read the code to
+reach the same judgement, and the one who wrote the fix checking their own work is player and
+referee at once). So a review window lives until that round actually closes — recheck passed,
+verdict settled — and only then is it time to ask. Closing mid-round throws away the context and
+the recheck along with it.
 
 **Only close windows you launched.** The boundary is the `agents` session: crew windows are yours
 to start, so they're yours to clean up. A pane you sent work to with `tmux-dispatch` — that `%7` in

@@ -41,7 +41,7 @@ REQ 第 10 节的开放问题必须在 implemented 前清空, 而自动推进期
 | status 给的下一步 | 自动模式怎么做 |
 |---|---|
 | `/review-cr CR-NNN docs\|spec\|impl` | **并行外包**, 见下一节 |
-| `/review-cr CR-NNN <stage>` (复核模式) | 自己做, 照 review-cr SKILL 第 6 步 |
+| `/review-cr CR-NNN <stage>` (复核模式) | **发回原窗口**, 谁报的谁复核, 照 review-cr SKILL 第 6 步 |
 | `/spec CR-NNN` | 自己写 (串行: spec 是一份连贯文档, 拆开写会互相矛盾) |
 | `/implement-cr CR-NNN` (处理发现) | 自己做, 逐条处置 |
 | `/implement-cr CR-NNN` (分步实施) | 自己做, TDD, 提交可跨回退单元一体的连续几步 |
