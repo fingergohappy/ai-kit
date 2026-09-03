@@ -154,6 +154,9 @@ Git worktree and branching utilities.
 |-------|---------|
 | `git:rebase-to-root` | Rebase worktree feature branch back to root's current branch |
 | `git:commit` | Create atomic git commits with validation and conventional commit messages |
+| `git:sync-main` | Merge the latest default branch into the current feature branch; stops on conflict |
+| `git:ship-pr` | Sync, push, open a PR, then optionally watch CI and merge it when green |
+| `git:release-ops` | Collect the ops steps a release needs from its PRs, cross-checked against the diff |
 
 ### wikijs
 

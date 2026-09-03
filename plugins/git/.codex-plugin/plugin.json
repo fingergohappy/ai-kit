@@ -1,7 +1,7 @@
 {
   "name": "git",
   "version": "1.0.0",
-  "description": "Git worktree and branching utilities for rebasing and atomic commits.",
+  "description": "Git worktree, branching, and pull-request utilities: rebasing, atomic commits, syncing the default branch, and shipping a PR through CI.",
   "author": {
     "name": "finger",
     "email": "fingergohappy@gmail.com",
@@ -15,13 +15,16 @@
     "commit",
     "rebase",
     "worktree",
-    "workflow"
+    "workflow",
+    "pull-request",
+    "merge",
+    "ci"
   ],
   "skills": "./skills/",
   "interface": {
     "displayName": "Git",
-    "shortDescription": "Git commit and rebase helpers for multi-worktree repos.",
-    "longDescription": "Utilities for creating atomic commits and rebasing feature worktrees back onto the root repository branch.",
+    "shortDescription": "Git commit, rebase, and pull-request helpers.",
+    "longDescription": "Utilities for creating atomic commits, rebasing feature worktrees back onto the root repository branch, merging the default branch into a feature branch, and shipping a pull request through CI.",
     "developerName": "finger",
     "category": "Coding",
     "capabilities": [
@@ -31,7 +34,9 @@
     "websiteURL": "https://github.com/fingergohappy/ai-kit",
     "defaultPrompt": [
       "Use git:commit to create an atomic conventional commit for my current changes.",
-      "Use git:rebase-to-root to rebase this worktree onto the root repo branch."
+      "Use git:sync-main to merge the latest main into my current branch.",
+      "Use git:ship-pr to push this branch, open a PR, and merge it once CI is green.",
+      "Use git:release-ops to collect the ops checklist for the upcoming release."
     ]
   }
 }
