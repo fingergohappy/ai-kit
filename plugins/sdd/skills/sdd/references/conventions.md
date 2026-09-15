@@ -15,14 +15,14 @@ docs/sdd/
 ├── req/REQ-NNN-<slug>.md     # 业务逻辑: 当前功能的结论 (入库)
 ├── cr/CR-NNN-<slug>.md       # 一次工作单元 (入库): 变更 CR 写改哪些条目, 立项 CR 写新业务交付什么
 ├── draft/<slug>/*.md         # 还没立 CR 的草稿 / 侦察记录 (入库; 立 CR 时整个升格进 work/)
-├── release/CR-NNN-<slug>.md  # 上线产物: 项目 PR 模板的副本, 实施当中逐条填, 开 PR 时整份贴进正文
-│                             #   与 cr/ 同级、按同一个编号命名, 不住 work/ -- work/ 提炼后整个删掉,
-│                             #   而上线事实要活到上线做完 (核查单, 迁移的上一版兼容判断, 跑过的命令
-│                             #   与输出), PR 合并之后它仍是唯一一份记录. prune 不管这个目录
+├── release/                  # 给上线的人用的东西, 与 cr/ 同级、按同一个编号命名, prune 不管
+│   ├── CR-NNN-<slug>.md      #   项目 PR 模板的副本, 实施当中逐条填, 开 PR 时整份贴进正文
+│   └── CR-NNN-<slug>.seed[-<名字>].sql  # 要人手跑且跑完即弃的 SQL (归宿见下节)
+│                             #   都不住 work/ -- work/ 提炼后整个删掉, 而这两样要活到上线真做完:
+│                             #   核查单、迁移的上一版兼容判断、跑过的命令与输出、还没跑的那段 SQL
 └── work/CR-NNN-<slug>/       # 立了 CR 之后, 一个变更一个文件夹 (入库)
     ├── <日期>-<主题>.md      # 草稿 / 侦察, 与 spec review 平级 (从 draft/<slug>/ 并进来)
     ├── spec.md               # 实施 spec: 改哪里, 按什么顺序, 怎么测, 怎么上线
-    ├── seed.sql              # 要人手跑的 SQL, 且跑完即弃的那类 (归宿见下节); 可有多份 seed-<名字>.sql
     └── reviews/              # 三次 review (CR fixed 后提炼进 lessons.md, 然后删除)
         ├── 01-docs.md        #   CR + REQ delta (写 spec 之前)
         ├── 02-spec.md        #   实施 spec (写代码之前)
@@ -107,13 +107,13 @@ review: to fix -> fixing -> fixed -> (CR fixed 后) 提炼进 lessons.md -> 删�
 - 时间锚点是代码库不是上线: REQ 更新与实现同分支同提交, 合并瞬间文档与代码一致.
 - 工作目录不长期保存: CR fixed 后 `/review-cr CR-NNN distill` 把处置为 "修复" 的发现归并成模式写进
   `lessons.md` (同模式只累加次数), review 的 `distilled` 填上 L 编号, 再盘点 `CR-NNN-<slug>/` 里的
-  草稿 spec.md seed.sql reviews/, **与用户确认哪些删**, 用 `sdd.py prune` 执行 (`--keep` 保留某项).
+  草稿 spec.md reviews/, **与用户确认哪些删**, 用 `sdd.py prune` 执行 (`--keep` 保留某项).
   草稿 / spec / review 是过程产物: 草稿在 docs review 里已被当证据核过
   (见 review-lanes 车道 A), 结论进了 CR 与 REQ; spec 的落点已写进 CR 第 5 节.
   **删 spec 之前先看它里面有没有还没执行的上线检查单** —— 那种东西搬进 `release/CR-NNN-<slug>.md`
   再删, 别让它跟着过程产物一起消失.
-  seed.sql 要等**上线动作真做完**: SQL 还没跑就留着那份 .sql (脚本会拦, 见上一节).
-  `release/CR-NNN-<slug>.md` 不在 prune 的范围里, 它是 CR 的长期附件. CR 不动 --
+  `release/` 下的两样 (上线产物与手工 SQL) 都不在 prune 的范围里: 它们是 CR 的长期附件,
+  要活到上线真做完 -- SQL 跑过之后由人删, 文件头的 `env= date= rows=` 就是它跑过的凭据. CR 不动 --
   它是业务文档, 工程教训不进去, 反查靠 lessons.md 的来源列. 之后的 review 与实施都先读错题本,
   次数 >= 2 的必查.
 
@@ -157,7 +157,7 @@ review 是软闸门: 跳过某次 review 直接往下走需要人明确说 "跳�
 | 文件 | 是什么 | 谁读它 |
 |---|---|---|
 | `release/CR-NNN-<slug>.md` | 项目 PR 模板的整份副本 (`sdd.py new-spec` 时建), 实施当中逐节填事实 | 开 PR 时整份贴进正文 (`ship-pr`), 之后是发布清单的来源 (`release-ops`) |
-| `work/CR-NNN-<slug>/seed.sql` | 要人手在数据库上跑的那段 SQL 本身 (`sdd.py new-seed CR-NNN [名字]` 建) | 上线时整段复制去跑的人 |
+| `release/CR-NNN-<slug>.seed[-<名字>].sql` | 要人手在数据库上跑的那段 SQL 本身 (`sdd.py new-seed CR-NNN [名字]` 建) | 上线时整段复制去跑的人 |
 
 **上线产物不住工作目录**, 与 `cr/` 同级、按同一个编号命名. 工作目录在提炼之后整个删掉, 而上线
 事实要活到上线真做完 —— 发布前后的核查单、迁移能不能被上一版二进制跑、实际跑过的命令与它们的
@@ -178,7 +178,7 @@ review 是软闸门: 跳过某次 review 直接往下走需要人明确说 "跳�
 |---|---|---|---|
 | **代码依赖的参考数据** | 新枚举行, 字典表, 状态码, 新渠道 | **项目的迁移目录, 与建表同一批** (`INSERT ... ON CONFLICT DO NOTHING`) | 少了这几行代码就是坏的. CI 与新环境建库必须自动带上, 靠人手跑必漏 |
 | **环境相关的业务配置** | 费率, 阈值, 生产账号 id, 租户开通 | **项目里入库的幂等 seed 脚本** (`db/seed/`, `scripts/`, 或项目已有的 ops 目录), 值按环境传参 | 写进迁移等于把 dev 的值刷进生产; 改一个值还得再加一个迁移 |
-| **一次性回填 / 数据修复** | 给存量 20 万行补 status | **`work/CR-NNN-<slug>/seed.sql`, 跑完即弃** | 只对 "当时的存量" 成立, 进迁移会在每个新环境上跑一遍毫无意义的空 UPDATE; 大批量要分批与监控, 不该卡住 migrator |
+| **一次性回填 / 数据修复** | 给存量 20 万行补 status | **`release/CR-NNN-<slug>.seed.sql`, 跑完即弃** | 只对 "当时的存量" 成立, 进迁移会在每个新环境上跑一遍毫无意义的空 UPDATE; 大批量要分批与监控, 不该卡住 migrator |
 | **开发 / 测试夹具** | 本地假数据 | 项目的 fixture / factory / `make seed-dev` | 绝不能出现在生产路径上 |
 
 **判定写进 spec §3 (数据与迁移)**, 连落到哪个路径一起写, 由 spec review 车道 D 审. 不要等到

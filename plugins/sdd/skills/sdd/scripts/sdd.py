@@ -15,17 +15,17 @@
                           同时把草稿目录 draft/<slug> 移成工作目录 work/CR-NNN-<slug>
   new-draft <slug|CR-NNN> <topic>   建草稿文件
   new-spec <CR-NNN>       从模板建实施 spec
-  new-seed <CR-NNN> [名字]  从模板建要人手跑的 SQL (seed.sql / seed-<名字>.sql).
+  new-seed <CR-NNN> [名字]  从模板建要人手跑的 SQL, 放 release/CR-NNN-<slug>.seed[-<名字>].sql.
                           只装 "跑完即弃" 的那类; 参考数据与环境配置的归宿在项目仓库里
   new-review <CR-NNN> docs|spec|impl   从模板建 review
   validate                一致性检查 (退出码: 有 error 时 1)
   index                   重新生成 INDEX.md
   lessons [--init] [--next-id]   错题本 docs/sdd/lessons.md: 摘要 / 建文件 / 下一个 L 编号
-  prune <CR-NNN> [--dry-run] [--keep draft|spec|seed|reviews]
+  prune <CR-NNN> [--dry-run] [--keep draft|spec|reviews]
                           删除 CR 工作目录里的草稿 spec.md *.sql reviews/ (--keep 逐项保留);
                           上线产物在 release/ 下, 不归 prune 管
                           CR fixed, 各 review fixed 且头部 "提炼" 已填, 才删;
-                          seed 文件的执行记录 (env=) 没填也不删
+                          手工 SQL 在 release/ 下, 不归 prune 管 (它要活到真跑过)
 """
 import argparse
 import datetime as _dt
@@ -611,17 +611,19 @@ def cmd_new_seed(args):
     cr = find_cr(root, args.cr)
     if not cr:
         die("没有这个 CR: %s" % args.cr)
-    d = cr_dir(root, args.cr)
-    if not d:
-        die("找不到 %s 的工作目录, 先 new-spec 建一个 (手工 SQL 的归宿判定写在 spec §3)" % args.cr)
     name = re.sub(r"[^a-z0-9-]+", "-", (args.name or "").lower()).strip("-")
-    path = os.path.join(d, "seed-%s.sql" % name if name else "seed.sql")
+    if args.name and not name:
+        die("名字 %r 里没有可用的 ascii 字母或数字, 文件名会退回默认的那一个. "
+            "换一个拉丁字母的短名 (backfill, fix-status), 中文写进文件头的说明" % args.name)
+    path = seed_path(root, cr, name)
+    os.makedirs(os.path.dirname(path), exist_ok=True)
     if os.path.exists(path):
         die("已存在: %s" % path)
     write(path, fill("seed.sql", {"CR": cr["id"], "NAME": args.name or "回填 / 修复"}))
     print("已建手工 SQL:", path)
-    print("  这里只放跑完即弃的那类. 参考数据进迁移, 环境配置进项目的 seed 脚本 --")
-    print("  work/ 会在提炼后整个删掉, 放进来等于给它判死刑 (归宿四类见 conventions).")
+    print("  与上线产物并排放在 release/ 下: 跑它的人和读发布说明的是同一个人, 而 work/ 在")
+    print("  提炼之后整个删掉 -- 这段 SQL 要活到它真的在每个环境跑过为止.")
+    print("  这里只放跑完即弃的那类. 参考数据进迁移, 环境配置进项目的 seed 脚本 (归宿四类见 conventions).")
 
 
 def cmd_new_review(args):
@@ -649,12 +651,23 @@ def cmd_new_review(args):
 SEED_DONE_RE = re.compile(r"env=\S")
 
 
-def seed_files(d):
-    """[(文件名, 是否已执行)], 按名字排序."""
+def seed_path(root, cr, name=""):
+    """手工 SQL 与上线产物并排: release/CR-NNN-<slug>.seed[-<名字>].sql."""
+    stem = "%s-%s.seed" % (cr["id"], cr["slug"])
+    return os.path.join(root, "release", "%s%s.sql" % (stem, "-" + name if name else ""))
+
+
+def seed_files(root, cr):
+    """[(相对 sdd 根的路径, 是否已执行)], 按名字排序."""
+    d = os.path.join(root, "release")
+    if not os.path.isdir(d):
+        return []
+    prefix = "%s-%s.seed" % (cr["id"], cr["slug"])
     out = []
     for fn in sorted(os.listdir(d)):
-        if fn.endswith(".sql"):
-            out.append((fn, bool(SEED_DONE_RE.search(read(os.path.join(d, fn))))))
+        if fn.startswith(prefix) and fn.endswith(".sql"):
+            full = os.path.join(d, fn)
+            out.append((os.path.join("release", fn), bool(SEED_DONE_RE.search(read(full)))))
     return out
 
 
@@ -664,8 +677,8 @@ def cr_state(root, cr):
     d = cr_dir(root, cr["id"])
     st = {"cr": cr, "status": info["status"], "dir": d, "spec": None, "reviews": {},
           "parallel": None, "seeds": []}
+    st["seeds"] = seed_files(root, cr)
     if d:
-        st["seeds"] = seed_files(d)
         pf = os.path.join(d, ".parallel")
         if os.path.isfile(pf):
             st["parallel"] = read(pf).strip().lower() == "yes"
@@ -1121,12 +1134,6 @@ def cmd_prune(args):
                 problems.append("%s review 引用的 %s 不在 lessons.md" % (stage, lid))
     if os.path.isdir(rdir) and not st["reviews"]:
         problems.append("reviews/ 里没有 0N-<stage>.md (只有原件?), 请先按规范提炼")
-    if "seed" not in set(args.keep or ()):
-        for fn, done in st["seeds"]:
-            if not done:
-                problems.append("%s 的执行记录还是空的 (头部 env=): 这段 SQL 还没在任何环境跑过. "
-                                "跑完把 env / date / rows 填上, 或 --keep seed 留着; "
-                                "确实不用跑了就写 env=n/a 说明原因" % fn)
     if problems:
         die("不能删:\n  - " + "\n  - ".join(problems))
     # 默认三样全删; --keep 逐项保留 (删除不可逆, 没提交过的改动 git 也恢复不了).
@@ -1140,9 +1147,6 @@ def cmd_prune(args):
         for fn in SPEC_FILES:
             if os.path.isfile(os.path.join(d, fn)):
                 targets.append((os.path.join(d, fn), False))
-    if "seed" not in keep:
-        for fn, _done in st["seeds"]:
-            targets.append((os.path.join(d, fn), False))
     if "reviews" not in keep and os.path.isdir(rdir):
         targets.append((rdir, True))
     pf = os.path.join(d, ".parallel")
@@ -1207,7 +1211,7 @@ def main():
     s = sub.add_parser("lessons"); s.add_argument("--init", action="store_true"); s.add_argument("--next-id", action="store_true"); s.set_defaults(fn=cmd_lessons)
     for _n in ("prune", "prune-reviews"):   # prune-reviews: 旧名, 保留
         s = sub.add_parser(_n); s.add_argument("cr"); s.add_argument("--dry-run", action="store_true")
-        s.add_argument("--keep", action="append", choices=("draft", "spec", "seed", "reviews"),
+        s.add_argument("--keep", action="append", choices=("draft", "spec", "reviews"),
                        help="保留某一项, 可给多次 (如 --keep spec)")
         s.set_defaults(fn=cmd_prune)
     args = ap.parse_args()

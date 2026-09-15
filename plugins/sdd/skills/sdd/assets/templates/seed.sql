@@ -1,7 +1,7 @@
 -- {{CR}} 手工 SQL: {{NAME}}
 --
 -- 这份文件是 "要人手在数据库上跑的那一段 SQL" 的**唯一**来源: 跑的人整段复制它, 不从
--- release/CR-NNN-<slug>.md 或 PR 正文里抄描述. 只有跑完就没用的 SQL 才放这里 -- work/ 在 CR 提炼后整个删掉,
+-- release/CR-NNN-<slug>.md 或 PR 正文里抄描述. 只有跑完就没用的 SQL 才放这里 --
 -- 以后新环境还要用的属于迁移或项目里入库的 seed 脚本 (四类归宿见 skill 的
 -- references/conventions.md "手工 SQL: 先判归宿, 再决定放哪").
 
