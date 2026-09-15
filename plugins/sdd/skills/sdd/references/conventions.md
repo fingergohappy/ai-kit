@@ -15,10 +15,14 @@ docs/sdd/
 ├── req/REQ-NNN-<slug>.md     # 业务逻辑: 当前功能的结论 (入库)
 ├── cr/CR-NNN-<slug>.md       # 一次工作单元 (入库): 变更 CR 写改哪些条目, 立项 CR 写新业务交付什么
 ├── draft/<slug>/*.md         # 还没立 CR 的草稿 / 侦察记录 (入库; 立 CR 时整个升格进 work/)
+├── release/CR-NNN-<slug>.md  # 上线产物: 项目 PR 模板的副本, 实施当中逐条填, 开 PR 时整份贴进正文
+│                             #   与 cr/ 同级、按同一个编号命名, 不住 work/ -- work/ 提炼后整个删掉,
+│                             #   而上线事实要活到上线做完 (核查单, 迁移的上一版兼容判断, 跑过的命令
+│                             #   与输出), PR 合并之后它仍是唯一一份记录. prune 不管这个目录
 └── work/CR-NNN-<slug>/       # 立了 CR 之后, 一个变更一个文件夹 (入库)
     ├── <日期>-<主题>.md      # 草稿 / 侦察, 与 spec review 平级 (从 draft/<slug>/ 并进来)
     ├── spec.md               # 实施 spec: 改哪里, 按什么顺序, 怎么测, 怎么上线
-    ├── release.md            # 项目 PR 模板的副本; 实施当中逐条填, 开 PR 时整份贴进正文
+    ├── seed.sql              # 要人手跑的 SQL, 且跑完即弃的那类 (归宿见下节); 可有多份 seed-<名字>.sql
     └── reviews/              # 三次 review (CR fixed 后提炼进 lessons.md, 然后删除)
         ├── 01-docs.md        #   CR + REQ delta (写 spec 之前)
         ├── 02-spec.md        #   实施 spec (写代码之前)
@@ -103,8 +107,13 @@ review: to fix -> fixing -> fixed -> (CR fixed 后) 提炼进 lessons.md -> 删�
 - 时间锚点是代码库不是上线: REQ 更新与实现同分支同提交, 合并瞬间文档与代码一致.
 - 工作目录不长期保存: CR fixed 后 `/review-cr CR-NNN distill` 把处置为 "修复" 的发现归并成模式写进
   `lessons.md` (同模式只累加次数), review 的 `distilled` 填上 L 编号, 再盘点 `CR-NNN-<slug>/` 里的
-  草稿 spec.md reviews/, **与用户确认哪些删**, 用 `sdd.py prune` 执行 (`--keep` 保留某项). 三样都是过程产物: 草稿在 docs review 里已被当证据核过
-  (见 review-lanes 车道 A), 结论进了 CR 与 REQ; spec 的落点已写进 CR 第 5 节. CR 不动 --
+  草稿 spec.md seed.sql reviews/, **与用户确认哪些删**, 用 `sdd.py prune` 执行 (`--keep` 保留某项).
+  草稿 / spec / review 是过程产物: 草稿在 docs review 里已被当证据核过
+  (见 review-lanes 车道 A), 结论进了 CR 与 REQ; spec 的落点已写进 CR 第 5 节.
+  **删 spec 之前先看它里面有没有还没执行的上线检查单** —— 那种东西搬进 `release/CR-NNN-<slug>.md`
+  再删, 别让它跟着过程产物一起消失.
+  seed.sql 要等**上线动作真做完**: SQL 还没跑就留着那份 .sql (脚本会拦, 见上一节).
+  `release/CR-NNN-<slug>.md` 不在 prune 的范围里, 它是 CR 的长期附件. CR 不动 --
   它是业务文档, 工程教训不进去, 反查靠 lessons.md 的来源列. 之后的 review 与实施都先读错题本,
   次数 >= 2 的必查.
 
@@ -119,7 +128,7 @@ review: to fix -> fixing -> fixed -> (CR fixed 后) 提炼进 lessons.md -> 删�
 /review-cr CR-NNN docs 审 CR + REQ delta                     -> reviews/01-docs.md
 /spec CR-NNN           写实施 spec (先侦察 file:line)         -> work/CR-NNN-*/spec.md
 /review-cr CR-NNN spec 审实施计划                             -> reviews/02-spec.md
-/implement-cr CR-NNN   按 spec 分步实施 (TDD), 提交可跨步, 填落点   [CR: fixing]
+/implement-cr CR-NNN   按 spec 分步实施 (TDD), 整段一个提交, 填落点 [CR: fixing]
 /review-cr CR-NNN impl 审实现                                 -> reviews/03-impl.md
 /implement-cr CR-NNN   落实: 更新 REQ 正文 + 变更记录, CR 置 fixed, 重生成 INDEX
 /review-cr CR-NNN distill  提炼教训进 lessons.md, 清理工作目录      -> lessons.md   [work/CR-NNN-* 删除]
@@ -141,14 +150,62 @@ review 是软闸门: 跳过某次 review 直接往下走需要人明确说 "跳�
 `/draft` `/req` `/create-cr` `/spec` `/implement-cr` 都是串行的活: spec 是一份连贯文档, 拆开写
 会互相矛盾; 分步实施前后依赖, 并行只会制造冲突, 真要并行写还得先做 worktree 隔离.
 
+## 上线产物: release/CR-NNN-<slug>.md 与手工 SQL
+
+除了草稿 / spec / review, 还有两样**给上线的人用**的东西. 它们不是过程笔记, 是交付物的一部分:
+
+| 文件 | 是什么 | 谁读它 |
+|---|---|---|
+| `release/CR-NNN-<slug>.md` | 项目 PR 模板的整份副本 (`sdd.py new-spec` 时建), 实施当中逐节填事实 | 开 PR 时整份贴进正文 (`ship-pr`), 之后是发布清单的来源 (`release-ops`) |
+| `work/CR-NNN-<slug>/seed.sql` | 要人手在数据库上跑的那段 SQL 本身 (`sdd.py new-seed CR-NNN [名字]` 建) | 上线时整段复制去跑的人 |
+
+**上线产物不住工作目录**, 与 `cr/` 同级、按同一个编号命名. 工作目录在提炼之后整个删掉, 而上线
+事实要活到上线真做完 —— 发布前后的核查单、迁移能不能被上一版二进制跑、实际跑过的命令与它们的
+最后一行输出. 放在 `work/` 下就只能靠 `prune --keep spec` 记得留它, 记不住就跟着草稿一起没了,
+而这几样恰恰是事后补不出来的. `prune` 因此不碰 `release/`; 它是 CR 的长期附件, 由 CR 第 5 节指过去。
+
+分成两份是因为用途不同: 上线产物是**描述** ("有一个回填, 迁移之后跑, 幂等"), SQL 文件是
+**可执行的正文**. 把 SQL 全文贴进去会随着模板贴进 PR 正文, 在 markdown 里被折行,
+被复述, 被截断 -- 而跑的人只该有一个来源. 所以它那一节只写指路与事实 (哪个文件,
+什么时候跑, 跑过没有, 影响了多少行), 不重贴 SQL.
+
+### 手工 SQL: 先判归宿, 再决定放哪
+
+**大多数 "seed SQL" 不该放在 work/ 里**. 先按下表判它属于哪一类 -- 判错的代价是上线后才发现
+新环境少了一行, 或者生产被刷进了 dev 的值:
+
+| 类型 | 例子 | 归宿 | 为什么不是别处 |
+|---|---|---|---|
+| **代码依赖的参考数据** | 新枚举行, 字典表, 状态码, 新渠道 | **项目的迁移目录, 与建表同一批** (`INSERT ... ON CONFLICT DO NOTHING`) | 少了这几行代码就是坏的. CI 与新环境建库必须自动带上, 靠人手跑必漏 |
+| **环境相关的业务配置** | 费率, 阈值, 生产账号 id, 租户开通 | **项目里入库的幂等 seed 脚本** (`db/seed/`, `scripts/`, 或项目已有的 ops 目录), 值按环境传参 | 写进迁移等于把 dev 的值刷进生产; 改一个值还得再加一个迁移 |
+| **一次性回填 / 数据修复** | 给存量 20 万行补 status | **`work/CR-NNN-<slug>/seed.sql`, 跑完即弃** | 只对 "当时的存量" 成立, 进迁移会在每个新环境上跑一遍毫无意义的空 UPDATE; 大批量要分批与监控, 不该卡住 migrator |
+| **开发 / 测试夹具** | 本地假数据 | 项目的 fixture / factory / `make seed-dev` | 绝不能出现在生产路径上 |
+
+**判定写进 spec §3 (数据与迁移)**, 连落到哪个路径一起写, 由 spec review 车道 D 审. 不要等到
+写代码时才临时决定.
+
+**work/ 只装第三类**. 前两类的 SQL 进项目仓库, work/ 里只写它的路径与执行顺序 -- `work/` 在
+CR 提炼后整个删掉, 把 "以后新环境还要用" 的东西放进去等于给它判了死刑. 项目还没有 seed 目录而
+这份 SQL 属于前两类: **建一个**, 在 spec §2 里当作本次改动的一部分, 别拿 work/ 凑合.
+
+`sdd.py new-seed` 建出来的文件头部要求写清: 归宿与不进迁移的理由, 跑的时机 (迁移之后? 滚动容器
+之前? 开关打开之前?), 幂等性与跑第二遍的后果, 预估行数, 回退动作. 正文按 **跑前核对查询 ->
+幂等的正文 -> 跑后核对查询** 三段写: 没有核对查询, 跑的人无法判断这次跑对没跑对.
+
+**执行记录没填就不许删**: 文件头有一行 `env=  date=  rows=  by=`, 跑过之后当场填.
+`sdd.py prune` 会拒绝删 `env=` 还空着的 seed 文件 (要留到真跑完; 确实不用跑了就写
+`env=n/a` 加原因, 或 `--keep seed`). 这与 "落点填提交 hash 不填勾" 是同一条: "这段 SQL
+我跑过了" 是自述, 写明环境与行数才是证据. `sdd.py status CR-NNN` 会把未执行的 SQL 列出来,
+所以它也会出现在 `PROGRESS.md` 里 -- 上线欠着的活不该只活在某个人的记忆里.
+
 ## 提交
 
 **只有代码改动值得单独一个提交.** 文档不占提交: REQ / CR 与 `draft/` `work/` 下的草稿 / spec / review
 都搭在同一分支的代码提交里走 (落实那一步与 REQ 更新同一个提交), 不要为 "写完 CR" "审完 docs"
 单独提交一次 -- 那两步没有代码, 提交里只有文档, 合进主干就是纯噪音.
 
-**一个提交可以覆盖连续几步**, 前提是这几步的回退单元一体; 一个提交不能只做半步. 详见
-`implement-cr` 的分步实施那节.
+**实施整段一个提交, 不按 spec §4 的步提交.** 每步提交一次就得每步跑一遍回归, 十几步落到 main
+上就是十几条噪音. 只有必须分批上线的才按批拆, 拆也不能只做半步. 详见 `implement-cr` 的段 B.
 
 **一轮 review 的修复合一个提交.** 逐条发现各提交一次会让一个 CR 堆出十几个 `fix:` --
 处置列各条填同一个 hash 即可, 那是它们同批修掉的记录. P0 与其余分开提交是允许的例外
@@ -167,7 +224,7 @@ hash 一次换对, CR 第 5 节填的就是最终值.
 
 **这个窗口只在代码还攒在分支上时存在.** 边做边合的节奏 (实施提交随做随进主干, CR 还在 fixing
 就已经 merge 了) 根本等不到它 -- impl review 复核完的时候代码早在 main 上, 只能往前加提交.
-那种节奏下提交数只能从源头控: 提交可跨步, 一轮 review 的修复合一个提交. 想留压缩的余地, 就得
+那种节奏下提交数只能从源头控: 实施一个提交, 一轮 review 的修复合一个提交. 想留压缩的余地, 就得
 让一个 CR 的实施提交攒在自己的分支上, 落实之后连同文档一起合.
 
 压完必须做三件事, 少一件就有指向不存在的提交的 hash:
@@ -235,7 +292,7 @@ review 的 agent (尤其是派出去的 codex / pi) 读不到你和用户之前�
 
 ## 每推进一步就贴进度
 
-做完任何一件让状态变化的事 -- 建了 review, 写完 spec, 提交了一步, 处置完发现, 置了 fixed --
+做完任何一件让状态变化的事 -- 建了 review, 写完 spec, 实施提交了, 处置完发现, 置了 fixed --
 立刻跑一次 `sdd.py status CR-NNN --write`, **把进度表原样贴出来**, 然后**接着做下一件**.
 
 贴进度是汇报, 不是交接: 贴完不要停下来等用户说 "继续". 该停的地方由各命令自己的规则定

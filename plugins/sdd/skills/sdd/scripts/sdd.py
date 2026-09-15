@@ -15,13 +15,17 @@
                           同时把草稿目录 draft/<slug> 移成工作目录 work/CR-NNN-<slug>
   new-draft <slug|CR-NNN> <topic>   建草稿文件
   new-spec <CR-NNN>       从模板建实施 spec
+  new-seed <CR-NNN> [名字]  从模板建要人手跑的 SQL (seed.sql / seed-<名字>.sql).
+                          只装 "跑完即弃" 的那类; 参考数据与环境配置的归宿在项目仓库里
   new-review <CR-NNN> docs|spec|impl   从模板建 review
   validate                一致性检查 (退出码: 有 error 时 1)
   index                   重新生成 INDEX.md
   lessons [--init] [--next-id]   错题本 docs/sdd/lessons.md: 摘要 / 建文件 / 下一个 L 编号
-  prune <CR-NNN> [--dry-run] [--keep draft|spec|reviews]
-                          删除 CR 工作目录里的草稿 spec.md release.md reviews/ (--keep 逐项保留);
-                          CR fixed, 各 review fixed 且头部 "提炼" 已填, 才删
+  prune <CR-NNN> [--dry-run] [--keep draft|spec|seed|reviews]
+                          删除 CR 工作目录里的草稿 spec.md *.sql reviews/ (--keep 逐项保留);
+                          上线产物在 release/ 下, 不归 prune 管
+                          CR fixed, 各 review fixed 且头部 "提炼" 已填, 才删;
+                          seed 文件的执行记录 (env=) 没填也不删
 """
 import argparse
 import datetime as _dt
@@ -415,7 +419,7 @@ def spec_steps(path):
 
 def cmd_init(args):
     base = os.path.abspath(args.root or os.path.join(os.getcwd(), "docs", "sdd"))
-    for sub in ("req", "cr", "draft", "work"):
+    for sub in ("req", "cr", "draft", "work", "release"):
         os.makedirs(os.path.join(base, sub), exist_ok=True)
     write_index(base)
     print("完成. 目录:", base)
@@ -542,12 +546,24 @@ def find_pr_template(repo_root):
     return None
 
 
-def write_release(root, d, cr_id):
-    """release.md: 项目有 PR 模板就整份复制过来 -- 骨架即模板, 实施时只往里填事实.
+def release_path(root, cr):
+    """上线产物住 docs/sdd/release/, 不住 CR 的工作目录.
+
+    工作目录在提炼之后整个删掉, 而上线事实要活到上线做完 -- 十六项发布核查、迁移的
+    上一版兼容判断、跑过的命令与输出, 这些在 PR 合并之后仍然是唯一一份记录. 放在
+    work/ 下就只能靠 prune 的 --keep 记得留它, 记不住就跟着草稿一起没了.
+    """
+    return os.path.join(root, "release", "%s-%s.md" % (cr["id"], cr["slug"]))
+
+
+def write_release(root, cr):
+    """release: 项目有 PR 模板就整份复制过来 -- 骨架即模板, 实施时只往里填事实.
 
     不覆盖已有的: 那里面是一路攒下来的事实.
     """
-    path = os.path.join(d, "release.md")
+    cr_id = cr["id"]
+    path = release_path(root, cr)
+    os.makedirs(os.path.dirname(path), exist_ok=True)
     if os.path.exists(path):
         return path, "existing"
     repo_root = os.path.dirname(os.path.dirname(root))
@@ -581,13 +597,31 @@ def cmd_new_spec(args):
                                   "BASE": git_head(os.path.dirname(os.path.dirname(root))),
                                   "TITLE": h1(read(cr["path"])) or cr["slug"]}))
     print("已建 spec:", path)
-    rpath, src = write_release(root, d, cr["id"])
+    rpath, src = write_release(root, cr)
     if src == "existing":
         print("release 已存在, 未动:", rpath)
     elif src:
         print("已建 release (上线事实): %s  <- 整份复制自 %s" % (rpath, src))
     else:
         print("已建 release (上线事实): %s  (本仓库没有 PR 模板, 用了通用清单)" % rpath)
+
+
+def cmd_new_seed(args):
+    root = need_root(args)
+    cr = find_cr(root, args.cr)
+    if not cr:
+        die("没有这个 CR: %s" % args.cr)
+    d = cr_dir(root, args.cr)
+    if not d:
+        die("找不到 %s 的工作目录, 先 new-spec 建一个 (手工 SQL 的归宿判定写在 spec §3)" % args.cr)
+    name = re.sub(r"[^a-z0-9-]+", "-", (args.name or "").lower()).strip("-")
+    path = os.path.join(d, "seed-%s.sql" % name if name else "seed.sql")
+    if os.path.exists(path):
+        die("已存在: %s" % path)
+    write(path, fill("seed.sql", {"CR": cr["id"], "NAME": args.name or "回填 / 修复"}))
+    print("已建手工 SQL:", path)
+    print("  这里只放跑完即弃的那类. 参考数据进迁移, 环境配置进项目的 seed 脚本 --")
+    print("  work/ 会在提炼后整个删掉, 放进来等于给它判死刑 (归宿四类见 conventions).")
 
 
 def cmd_new_review(args):
@@ -610,13 +644,28 @@ def cmd_new_review(args):
 
 # ---------- status ----------
 
+# 手工 SQL: 工作目录下的 *.sql. "跑过了" 认的是文件头 `env=` 后面真写了东西 --
+# 与落点填 hash 同一条道理, 自述不算, 环境 + 行数才算证据.
+SEED_DONE_RE = re.compile(r"env=\S")
+
+
+def seed_files(d):
+    """[(文件名, 是否已执行)], 按名字排序."""
+    out = []
+    for fn in sorted(os.listdir(d)):
+        if fn.endswith(".sql"):
+            out.append((fn, bool(SEED_DONE_RE.search(read(os.path.join(d, fn))))))
+    return out
+
+
 def cr_state(root, cr):
     """收集一个 CR 的全部状态, 供 status / index 用."""
     info = parse_cr(cr["path"])
     d = cr_dir(root, cr["id"])
     st = {"cr": cr, "status": info["status"], "dir": d, "spec": None, "reviews": {},
-          "parallel": None}
+          "parallel": None, "seeds": []}
     if d:
+        st["seeds"] = seed_files(d)
         pf = os.path.join(d, ".parallel")
         if os.path.isfile(pf):
             st["parallel"] = read(pf).strip().lower() == "yes"
@@ -664,7 +713,7 @@ def next_step(st):
     if total == 0:
         return "/spec %s" % cid, "spec §4 分步表为空或格式不对 (需要 `| 步 | 内容 | 合并即生效? | 落点 |`)"
     if pending:
-        return "/implement-cr %s" % cid, "实施: %d/%d 步待办 (落点填提交 hash; 回退单元一体的连续几步可共用一个提交)" % (pending, total)
+        return "/implement-cr %s" % cid, "实施: %d/%d 步待办 (整段做完提交一次, 落点列各行填同一个 hash)" % (pending, total)
     if "impl" not in rv:
         return "/review-cr %s impl" % cid, "全部步骤已落地, 实现还没审过"
     return "/implement-cr %s" % cid, "落实: 更新 REQ 正文与变更记录, CR 置 fixed, 重生成 INDEX"
@@ -715,7 +764,7 @@ def checklist(st):
     rows.append(("spec审",) + _gate_review(rv, "spec") + ("审实施计划",))
 
     if st["spec"] is None or st["spec"][0] == 0:
-        rows.append(("实施", False, "", "TDD 分步实施, 提交可跨步"))
+        rows.append(("实施", False, "", "TDD 分步实施, 整段一个提交"))
     else:
         total, pending = st["spec"]
         rows.append(("实施", pending == 0, "%d/%d 步已提交%s" % (
@@ -779,7 +828,7 @@ def fmt_reviews(st):
 
 PROGRESS_FILE = "PROGRESS.md"
 # 实施文档: 跟 spec 一起留 / 一起删 (--keep spec), 不算草稿
-SPEC_FILES = ("spec.md", "release.md")
+SPEC_FILES = ("spec.md",)
 
 
 def render_cr_status(root, cr, st=None):
@@ -793,6 +842,10 @@ def render_cr_status(root, cr, st=None):
            "  工作目录: " + (st["dir"] or "(无)")]
     if st["parallel"] is not None:
         out.append("  review 策略: " + ("并行 (按车道派给 codex / pi)" if st["parallel"] else "串行 (自审)"))
+    if st["seeds"]:
+        # 上线要人手跑的那几段 SQL. 没跑完的是欠着的活, 得让翻 PROGRESS.md 的人一眼看见
+        out.append("  手工 SQL: " + ", ".join(
+            "%s (%s)" % (fn, "已执行" if done else "未执行") for fn, done in st["seeds"]))
     if st["status"] == "rejected":
         # 链条已中断, 摊平的关卡表会误导 (后面几关永远不会走)
         out.append("  spec: " + ("无" if st["spec"] is None else "%d 步, %d 待办" % st["spec"]))
@@ -1068,6 +1121,12 @@ def cmd_prune(args):
                 problems.append("%s review 引用的 %s 不在 lessons.md" % (stage, lid))
     if os.path.isdir(rdir) and not st["reviews"]:
         problems.append("reviews/ 里没有 0N-<stage>.md (只有原件?), 请先按规范提炼")
+    if "seed" not in set(args.keep or ()):
+        for fn, done in st["seeds"]:
+            if not done:
+                problems.append("%s 的执行记录还是空的 (头部 env=): 这段 SQL 还没在任何环境跑过. "
+                                "跑完把 env / date / rows 填上, 或 --keep seed 留着; "
+                                "确实不用跑了就写 env=n/a 说明原因" % fn)
     if problems:
         die("不能删:\n  - " + "\n  - ".join(problems))
     # 默认三样全删; --keep 逐项保留 (删除不可逆, 没提交过的改动 git 也恢复不了).
@@ -1081,6 +1140,9 @@ def cmd_prune(args):
         for fn in SPEC_FILES:
             if os.path.isfile(os.path.join(d, fn)):
                 targets.append((os.path.join(d, fn), False))
+    if "seed" not in keep:
+        for fn, _done in st["seeds"]:
+            targets.append((os.path.join(d, fn), False))
     if "reviews" not in keep and os.path.isdir(rdir):
         targets.append((rdir, True))
     pf = os.path.join(d, ".parallel")
@@ -1136,6 +1198,8 @@ def main():
     s.add_argument("--new", action="store_true", help="新增业务的立项 CR (默认是变更 CR)"); s.set_defaults(fn=cmd_new_cr)
     s = sub.add_parser("new-draft"); s.add_argument("key", help="slug 或 CR-NNN"); s.add_argument("topic"); s.set_defaults(fn=cmd_new_draft)
     s = sub.add_parser("new-spec"); s.add_argument("cr"); s.add_argument("--force", action="store_true"); s.set_defaults(fn=cmd_new_spec)
+    s = sub.add_parser("new-seed"); s.add_argument("cr"); s.add_argument("name", nargs="?")
+    s.set_defaults(fn=cmd_new_seed)
     s = sub.add_parser("new-review"); s.add_argument("cr"); s.add_argument("stage", choices=STAGES)
     s.add_argument("--reviewer"); s.add_argument("--force", action="store_true"); s.set_defaults(fn=cmd_new_review)
     sub.add_parser("validate").set_defaults(fn=cmd_validate)
@@ -1143,7 +1207,7 @@ def main():
     s = sub.add_parser("lessons"); s.add_argument("--init", action="store_true"); s.add_argument("--next-id", action="store_true"); s.set_defaults(fn=cmd_lessons)
     for _n in ("prune", "prune-reviews"):   # prune-reviews: 旧名, 保留
         s = sub.add_parser(_n); s.add_argument("cr"); s.add_argument("--dry-run", action="store_true")
-        s.add_argument("--keep", action="append", choices=("draft", "spec", "reviews"),
+        s.add_argument("--keep", action="append", choices=("draft", "spec", "seed", "reviews"),
                        help="保留某一项, 可给多次 (如 --keep spec)")
         s.set_defaults(fn=cmd_prune)
     args = ap.parse_args()
