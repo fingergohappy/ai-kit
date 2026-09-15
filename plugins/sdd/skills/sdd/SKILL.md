@@ -44,6 +44,9 @@ spec §4 表里填没填提交 hash), 不是 agent 自述. 所以换个会话接
   整套体系靠条目号互相引用, 重排一次全断.
 - **CR 必须挂在具体条目上**. 变更 CR 的影响需求精确到 FR-x / BR-y / AC-z, 新增 FR 必带新增 AC;
   全新业务用立项 CR (`new-cr --new`), 挂在新建的 draft REQ 上, 交付范围通常是全文.
+- **手工 SQL 先判归宿**. 代码依赖的参考数据进迁移, 环境相关的配置进项目里入库的 seed 脚本,
+  开发夹具进 fixture; 只有 "跑完即弃" 的一次性回填 / 修复才放 `release/CR-NNN-<slug>.seed.sql`
+  (`sdd.py new-seed`) -- 与上线产物并排, 跑它的人和读发布说明的是同一个人. 判定写进 spec §3.
 - **跨文档引用不写工作目录的路径**. 引用 review 写 `CR-NNN D-2` -- `work/` 提炼后整个删掉, 路径会失效.
 - **review 是软闸门**. 下一阶段发现上一阶段 review 缺失或未 fixed 时, 停下来说明; 只有
   用户明确说 "跳过" 才继续.
@@ -63,7 +66,7 @@ review: to fix -> fixing -> fixed
 
 ```
 /draft -> /req -> /create-cr -> /review-cr docs -> /spec -> /review-cr spec
-       -> /implement-cr (TDD 实施, 提交可跨步) -> /review-cr impl
+       -> /implement-cr (TDD 实施, 整段一个提交) -> /review-cr impl
        -> /implement-cr (落实 REQ, CR fixed) -> /review-cr distill (提炼进 lessons.md, 清理工作目录)
 ```
 

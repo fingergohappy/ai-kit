@@ -97,6 +97,8 @@ If the diff genuinely needs no ops work, say **"Ops: none"** explicitly. A missi
 
 If the project keeps a deployment checklist for this change elsewhere, take the items from there rather than re-deriving them — a repo on the sdd workflow accumulates them in `docs/sdd/work/CR-NNN-*/release.md` while the code is being written — that file is a **copy of this project's own PR template**, filled in section by section as each step lands, so facts like "the previous binary cannot run on the new schema" and the actual last line of a verification command are recorded at the moment they are known. When it exists and its headings match the template, it is the body: check it against the template (a template can change mid-CR), strip the comments, post it. Still put them in the PR body: the reviewer and the deployer read the PR, not that file.
 
+Any hand-run SQL that CR needs sits beside its release notes as `docs/sdd/release/CR-NNN-<slug>.seed*.sql` (or, for reference data and per-environment config, in the project's own migration or seed directory — that is where it belongs). **Name the file and its ordering in the ops section; do not paste the SQL into the PR body.** Markdown reflows it, reviewers copy it out of the wrong place, and two copies drift — the person running it needs exactly one source. Do quote the facts that decide when it runs: idempotent or not, what a second run does, and the row count it should touch.
+
 Report the PR URL as soon as it exists. That is the deliverable; everything after this point is optional.
 
 ## Phase 4 — Ask before touching the merge

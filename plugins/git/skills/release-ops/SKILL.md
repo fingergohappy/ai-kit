@@ -72,7 +72,7 @@ git log  <tag>..<to-ref> --oneline
 |---|---|
 | New env var / config key | new `os.Getenv` / `process.env.` / `getenv` / `ENV[` reads in the diff; new lines in `.env.example`, chart values, config schemas |
 | Migration | added files under the project's migration directory — note renames and version collisions, not just additions |
-| Seed / backfill SQL | added `.sql` with `INSERT`/`UPDATE`; new scripts under `scripts/`, `db/seeds/` |
+| Seed / backfill SQL | added `.sql` with `INSERT`/`UPDATE`; new scripts under `scripts/`, `db/seeds/`; on an sdd repo also `docs/sdd/release/CR-*.seed*.sql` — its header says when to run it and whether it already ran (`env=` filled in) |
 | New dependency or external service | `go.mod` / `package.json` / `requirements.txt` / `Cargo.toml` diffs; new API hosts, queues, cron entries, buckets |
 | Feature flag | new flag and its default value |
 

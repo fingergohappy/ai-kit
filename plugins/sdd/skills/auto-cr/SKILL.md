@@ -44,7 +44,7 @@ REQ 第 10 节的开放问题必须在 implemented 前清空, 而自动推进期
 | `/review-cr CR-NNN <stage>` (复核模式) | **发回原窗口**, 谁报的谁复核, 照 review-cr SKILL 第 6 步 |
 | `/spec CR-NNN` | 自己写 (串行: spec 是一份连贯文档, 拆开写会互相矛盾) |
 | `/implement-cr CR-NNN` (处理发现) | 自己做, 逐条处置 |
-| `/implement-cr CR-NNN` (分步实施) | 自己做, TDD, 提交可跨回退单元一体的连续几步 |
+| `/implement-cr CR-NNN` (分步实施) | 自己做, TDD, 整段做完提交一次 |
 | `/implement-cr CR-NNN` (落实) | **停** -- 到终点了, 出 OQ 清单 |
 | `/review-cr CR-NNN distill` | **停** -- distill 要问用户删哪些文件 |
 
