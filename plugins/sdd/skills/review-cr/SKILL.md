@@ -113,6 +113,11 @@ tmux list-panes -t agents:codex-CR-NNN-<stage>-A -F '#{pane_id}'
 要跑代码 / 跑测试的车道 (docs A, spec A, impl A / B / E) 优先给手上更强的那个.
 只有一个工具可用时全给它, 车道照样一个一个开.
 
+**工作树只能有一个人改.** impl 阶段的车道 E 要做变异验证 (改一行看红不红, 做法见 review-lanes.md),
+那是同批唯一被允许改工作树的窗口; 其余车道的 brief 里写明 "只读, 不跑测试, 判据一律取
+`git show <commit>:<path>` 的提交内容". 不这样切, 别的车道会读到瞬时变异态并据此报出假发现 --
+这不是假设, 是实际发生过的. 几个车道都要跑测试时, 给做变异的那个开一个自己的 `git worktree`.
+
 **3. 派发**: 用 `tmux-dispatch` skill 送 brief, 一个窗口一份, 不要自己 `send-keys`. 每份 brief 必须自带:
 
 - 审什么: CR / REQ / spec 的**绝对路径**, impl 阶段另给基点 commit 与 `git diff` 范围
