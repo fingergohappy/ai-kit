@@ -67,7 +67,7 @@ docs/sdd/
 └── work/CR-NNN-<slug>/          一个变更一个文件夹 (入库)
     {<日期>-<主题>.md, spec.md, reviews/01-docs.md 02-spec.md 03-impl.md}
                                   CR fixed 并提炼后整个删除 (sdd.py prune)
-  release/CR-NNN-<slug>.md        上线产物: PR 模板的副本, 开 PR 时整份贴进正文
+  release/CR-NNN-<slug>.md        上线产物: PR 模板的副本, 中文填, 开 PR 时翻成英文贴进正文
   release/CR-NNN-<slug>.seed*.sql 要人手跑且跑完即弃的 SQL
                                   两样都与 cr/ 同级, prune 不管 -- 它们要活到上线真做完
 ```

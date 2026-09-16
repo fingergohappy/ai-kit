@@ -569,11 +569,12 @@ def write_release(root, cr):
     repo_root = os.path.dirname(os.path.dirname(root))
     tmpl = find_pr_template(repo_root)
     if not tmpl:
-        write(path, "<!-- %s 的上线事实, 实施当中逐条记, 开 PR 时贴进正文. -->\n\n%s"
+        write(path, "<!-- %s 的上线事实, 实施当中逐条用中文记, 开 PR 时翻成英文贴进正文. -->\n\n%s"
                     % (cr_id, FALLBACK_RELEASE))
         return path, None
     rel_tmpl = os.path.relpath(tmpl, repo_root)
-    head = ("<!-- %s 的上线事实. 复制自 %s (%s): 照它的节填, 开 PR 时整份贴进正文.\n"
+    head = ("<!-- %s 的上线事实. 复制自 %s (%s): 照它的节用中文填, 开 PR 时翻成英文整份贴进正文.\n"
+            "     节标题 / 表头 / 检查项题头保留模板原文, 命令输出与标识符逐字不动; PR 正文是英文, 这里是中文的事实来源.\n"
             "     贴之前把 HTML 注释和没替换的占位符删干净 -- 模板自己也这么要求.\n"
             "     模板可能已经更新, 开 PR 前对一眼源文件. -->\n\n"
             % (cr_id, rel_tmpl, today()))
