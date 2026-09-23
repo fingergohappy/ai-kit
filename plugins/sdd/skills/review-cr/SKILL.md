@@ -102,14 +102,15 @@ review 是这套流程里真正拦住问题的环节: 文档错了在 docs 阶�
 ```sh
 tmux has-session -t agents 2>/dev/null || tmux new-session -d -s agents
 # 一个车道一个窗口, 窗口名带车道号, 便于 tmux list-windows 一眼看出谁在审什么
-tmux new-window -t agents -n codex-CR-NNN-<stage>-A "cd <repo 绝对路径> && exec codex -m gpt-5.6-sol -c model_reasoning_effort=\"max\""
-tmux new-window -t agents -n pi-CR-NNN-<stage>-B    "cd <repo 绝对路径> && exec pi --provider xai --model grok-4.6 --thinking xhigh"
+tmux new-window -t agents -n codex-CR-NNN-<stage>-A "cd <repo 绝对路径> && exec codex"
+tmux new-window -t agents -n pi-CR-NNN-<stage>-B    "cd <repo 绝对路径> && exec pi"
 tmux list-panes -t agents:codex-CR-NNN-<stage>-A -F '#{pane_id}'
 ```
 
-模型 id 照抄, 不要缩写 -- 写错了窗口会停在 shell 提示符上, 看起来跟 "正在思考" 一模一样.
+裸启动, 不带模型 / 思考等级参数: 每个窗口用那个工具自己配置的默认模型 (见 `agent-crew` 的 "Models" 一节).
+只有用户在当次对话里点名某个模型才加参数, 并照抄用户给的完整 id. 启动后看一眼窗口底栏的实际模型, 合并 review 时写进车道结论.
 
-**模型分配**: 车道之间交替换工具, 别让所有车道都用同一个模型 -- 同一个盲点审五遍还是那个盲点.
+**模型分配**: 车道之间交替换工具 (codex / pi 交替), 别让所有车道都用同一个工具 -- 同一个盲点审五遍还是那个盲点.
 要跑代码 / 跑测试的车道 (docs A, spec A, impl A / B / E) 优先给手上更强的那个.
 只有一个工具可用时全给它, 车道照样一个一个开.
 

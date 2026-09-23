@@ -1,7 +1,7 @@
 ---
 name: agent-crew
 description: |
-  Put outside CLI agents (codex, pi, ...) to work in a dedicated `agents` tmux session, one window each — whether that is handing one of them a job, splitting a job across several, having two solve the same problem independently, or having several review one artifact from different angles. Use whenever the user says "让 codex 去做这个", "让 codex 和 pi 一起做", "起个 agent 跑一下", "让 pi 也做一遍看看", "起几个 agent 分头审", "多角度并行 review", "一个车道一个模型", "开几个窗口跑", "fan this out", "have codex do it", "run these in parallel". Covers launching the windows so their thinking stays visible, the per-tool model flags, how work is split so the results compose, how writing agents are isolated so they don't destroy each other's work, and how the results are collected and checked, and how camp is broken afterwards (ask before closing, so windows don't pile up). Writing and delivering each window's brief is `tmux-dispatch`'s job.
+  Put outside CLI agents (codex, pi, ...) to work in a dedicated `agents` tmux session, one window each — whether that is handing one of them a job, splitting a job across several, having two solve the same problem independently, or having several review one artifact from different angles. Use whenever the user says "让 codex 去做这个", "让 codex 和 pi 一起做", "起个 agent 跑一下", "让 pi 也做一遍看看", "起几个 agent 分头审", "多角度并行 review", "一个车道一个模型", "开几个窗口跑", "fan this out", "have codex do it", "run these in parallel". Covers launching the windows so their thinking stays visible (each tool on its own default model), how work is split so the results compose, how writing agents are isolated so they don't destroy each other's work, and how the results are collected and checked, and how camp is broken afterwards (ask before closing, so windows don't pile up). Writing and delivering each window's brief is `tmux-dispatch`'s job.
 argument-hint: "[<the work>] [<who: codex|pi|...>]"
 disable-model-invocation: false
 ---
@@ -31,8 +31,8 @@ tmux has-session -t agents 2>/dev/null || tmux new-session -d -s agents
 
 ```sh
 # right: interactive, output visible as it happens
-tmux new-window -t agents -n <name> "cd <absolute path> && exec pi --provider xai --model grok-4.6 --thinking xhigh"
-tmux new-window -t agents -n <name> "cd <absolute path> && exec codex -m gpt-5.6-sol -c model_reasoning_effort=\"max\""
+tmux new-window -t agents -n <name> "cd <absolute path> && exec pi"
+tmux new-window -t agents -n <name> "cd <absolute path> && exec codex"
 
 # wrong: non-interactive plus a pipe — silent for the entire run
 pi -p "$(cat brief.md)" 2>&1 | tee out.log
@@ -44,20 +44,22 @@ pi -p "$(cat brief.md)" 2>&1 | tee out.log
 
 The `cd` in the launch command sets that agent's working directory — for writing agents, see the isolation section below, because this is where the isolation is decided.
 
-## Model flags
+## Models: whatever the tool starts with
 
-Copy these verbatim — the model id is the whole string:
+Launch `codex` and `pi` bare, with no model or reasoning flags: each window runs whatever model and
+reasoning level that tool is configured to start with (`~/.codex/config.toml`, pi's own settings).
+The user picks models in those configs, not in this skill, so don't add `-m`, `--model`,
+`--provider`, `--thinking` or `-c model_reasoning_effort=...` unless the user asks for a specific
+model in that conversation. If they do, use the exact id they give; a nickname that isn't a real
+model id makes the window exit at once and leaves a bare shell prompt that looks like thinking.
 
-| tool | how to launch it |
-|---|---|
-| `pi` | `pi --provider xai --model grok-4.6 --thinking xhigh` |
-| `codex` | `codex -m gpt-5.6-sol -c model_reasoning_effort="max"` |
+After launching, glance at the window once: both tools print the model they started with in their
+footer. Name that model in your report, so it's clear what actually reviewed or wrote.
 
-`sol`, `grok`, `5.6` are nicknames, not model ids. A window launched with one exits on an unknown-model error the moment it starts, and what's left is a pane sitting at a shell prompt — which looks exactly like an agent that's thinking. Never shorten, never reconstruct from memory.
-
-codex has no `--thinking` flag; the reasoning level is a config override, hence the `-c`. Write both out in the launch command even when the user's `~/.codex/config.toml` already defaults to them: duplicate and review need a different model per window, and an inherited default is the same model in every window.
-
-For **duplicate** and **review**, deliberately use different models per window where it's cheap to do so — two models with the same blind spot answering the same question twice buys nothing over asking once. For **split**, it doesn't matter; pick whichever is better at that piece.
+For **duplicate** and **review**, different windows should be different models where that's cheap,
+because two models with the same blind spot buy nothing over one. Using codex for one window and pi
+for the other already gives two different models; two windows of the same tool give the same model
+twice, so mix tools rather than adding flags. For **split**, it doesn't matter.
 
 ## Hand each window its brief
 

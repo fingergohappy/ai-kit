@@ -31,8 +31,8 @@ tmux has-session -t agents 2>/dev/null || tmux new-session -d -s agents
 
 ```sh
 # 对：交互式，输出实时可见
-tmux new-window -t agents -n <名字> "cd <绝对路径> && exec pi --provider xai --model grok-4.6 --thinking xhigh"
-tmux new-window -t agents -n <名字> "cd <绝对路径> && exec codex -m gpt-5.6-sol -c model_reasoning_effort=\"max\""
+tmux new-window -t agents -n <名字> "cd <绝对路径> && exec pi"
+tmux new-window -t agents -n <名字> "cd <绝对路径> && exec codex"
 
 # 错：非交互 + 管道，全程没有任何输出
 pi -p "$(cat brief.md)" 2>&1 | tee out.log
@@ -44,20 +44,19 @@ pi -p "$(cat brief.md)" 2>&1 | tee out.log
 
 启动命令里的 `cd` 决定了这个 agent 的工作目录——**要写代码的 agent，隔离就是在这一步定下来的**，见下面那节。
 
-## 模型约定
+## 模型: 启动起来是什么就用什么
 
-原样照抄，模型 id 是完整的那一整串：
+`codex` 和 `pi` 直接裸启动, 不带任何模型或思考等级参数: 每个 window 用的是那个工具自己配置的默认模型
+(`~/.codex/config.toml`、pi 自己的设置)。选模型是用户在那些配置里做的事, 不在本 skill 里写死, 所以不要加
+`-m`、`--model`、`--provider`、`--thinking` 或 `-c model_reasoning_effort=...`, 除非用户在当次对话里点名要
+某个模型。点名时照抄用户给的完整 id; 简称不是真实的模型 id, window 会一启动就退出, 只剩一个看起来像在
+思考的 shell 提示符。
 
-| 工具 | 怎么起 |
-|---|---|
-| `pi` | `pi --provider xai --model grok-4.6 --thinking xhigh` |
-| `codex` | `codex -m gpt-5.6-sol -c model_reasoning_effort="max"` |
+启动后看一眼 window: 两个工具都会在底栏打印实际启动的模型。汇报时把这个模型名说出来, 让人知道到底是谁审的、谁写的。
 
-`sol`、`grok`、`5.6` 是外号，不是模型 id。用外号起的 window 会在启动瞬间因未知模型报错退出，留下一个停在 shell 提示符上的 pane——看起来跟正在思考的 agent 一模一样。不要简写，不要凭记忆拼。
-
-codex 没有 `--thinking` 这个 flag，思考等级是 config override，所以要写 `-c`。即便用户的 `~/.codex/config.toml` 里默认就是这两个值，启动命令里也要显式写全：对照和审查形态要求每个 window 用不同模型，而继承默认值意味着每个 window 都是同一个模型。
-
-**对照**和**审查**这两种形态，在成本允许时刻意让各 window 用不同模型——两个盲区相同的模型把同一个问题回答两遍，比回答一遍多不出任何东西。**拆分**则无所谓，哪个更擅长那一块就用哪个。
+对照和审查形态里, 不同 window 最好是不同的模型: 同一个盲点问两遍, 不比问一遍多得到什么。一个 window
+用 codex、另一个用 pi, 本身就是两个模型; 同一个工具开两个 window 就是同一个模型两遍, 所以要混用工具,
+而不是加参数。拆分形态无所谓。
 
 ## 给每个 window 发任务书
 
