@@ -1,7 +1,7 @@
 ---
 name: review-cr
 description: >-
-  对一个变更 CR-NNN 做三次 review 之一: docs (CR + REQ delta, 写 spec 前), spec (实施计划, 写代码前), impl (代码 vs spec vs AC, 落实前); 或对已处置的发现做复核. 按车道审, 每条发现带 file:line 证据与最小修复, 写进 work/CR-NNN-<slug>/reviews/0N-<stage>.md, 状态 to fix / fixing / fixed. CR fixed 后用 distill 模式把 review 里犯过的错提炼进入库的错题本 docs/sdd/lessons.md, 再盘点工作目录 (草稿, spec, review 都是过程产物), 与用户确认后删除. 当用户说 "review / 审一下 / 复审 / 检查这个 CR / spec / 实现", "看看有没有问题", "并行审这个 CR / 派给 codex 审", "提炼 / 总结 review 的教训 / 清理 review", 或 sdd status 的下一步指向 review 或 distill 时使用. 不改代码.
+  对一个变更 CR-NNN 做三次 review 之一: docs (CR + REQ delta, 写 spec 前), spec (实施计划, 写代码前), impl (代码 vs spec vs AC, 落实前); 或对已处置的发现做复核. 按车道审, 每条发现带 file:line 证据与最小修复, 写进 work/CR-NNN-<slug>/reviews/0N-<stage>.md, 状态 to fix / fixing / fixed. CR fixed 后用 distill 模式把 review 里犯过的错提炼进入库的错题本 docs/sdd/lessons.md, 再逐份判工作目录里那些过程产物 (草稿, spec, review) 的归宿: 上线还要用的移进 release/, 其余删. 当用户说 "review / 审一下 / 复审 / 检查这个 CR / spec / 实现", "看看有没有问题", "并行审这个 CR / 派给 codex 审", "提炼 / 总结 review 的教训 / 清理 review", 或 sdd status 的下一步指向 review 或 distill 时使用. 不改代码.
 ---
 
 # /review-cr: 三次 review
@@ -164,7 +164,8 @@ tmux list-panes -t agents:codex-CR-NNN-<stage>-A -F '#{pane_id}'
 
 review 是过程产物, 留着只会越积越多; 值得长期保存的是 "犯过什么错". CR fixed 之后把它提炼进错题本, 然后连同
 草稿与 spec 一起删掉 -- `work/` 下的三样都是过程产物, 结论该在的地方是 CR 与 REQ.
-删除不可逆, 所以第 6 步是盘点完问用户, 不是一刀切.
+删除不可逆, 所以第 6 步先逐份判归宿: 上线还要用的移进 `release/`, 其余删 -- 不是一刀切, 也不是
+拿一张表去问用户留哪个.
 `sdd.py status CR-NNN` 在 CR fixed 且 review 未提炼时会把下一步指到这里.
 
 1. **前提**: CR 状态 fixed, 各份 review 状态 fixed. 不满足就停 (脚本也会拒绝删除).
@@ -178,33 +179,40 @@ review 是过程产物, 留着只会越积越多; 值得长期保存的是 "犯�
 5. **回填**: 每份 review 的 frontmatter 把 `distilled: false` 改成 `distilled: [L-3, L-4]`, 或者
    `distilled: "无可提炼: 理由"` (含 `": "` 必须加引号). CR 不动 -- 它是业务文档, 工程教训不进去;
    反查靠 lessons.md 的 "来源" 列 (grep `CR-NNN`).
-6. **盘点, 问, 再删**: 删了就不再回来 -- 已提交过的还能从 git 历史里翻, 没提交过的翻不回来.
-   所以不一刀切, 三小步:
+6. **判归宿, 再删**: 删了就不再回来 -- 已提交过的还能从 git 历史里翻, 没提交过的翻不回来.
+   所以先逐份判归宿, 再一次删干净:
 
-   **6a 盘点**: `sdd.py prune CR-NNN --dry-run` 拿到清单, 然后**逐份读一遍**, 核实每样东西的内容
-   有没有落到入库文档里, 列成表给用户:
+   **归宿只有两个, 没有第三个**: 上线还要用的内容**移进 `release/CR-NNN-<slug>.md`**, 其余删.
+   `work/` 是过程产物, **不是待办清单** -- "上线检查单还没走完" 不是保留 `spec.md` 的理由,
+   恰恰是把没走完那几条移进上线产物的理由: 跑它们的人读的是 `release/`, 不会去翻某个 CR 的
+   工作目录, 而那个目录迟早会被下一次提炼删掉.
 
-   | 文件 | 内容去向 | 建议 |
+   **6a 判归宿**: `sdd.py prune CR-NNN --dry-run` 拿到清单, 然后**逐份读一遍**, 对每样东西问
+   一句 "它的内容现在还有谁要用":
+
+   | 文件 | 内容去向 | 怎么处置 |
    |---|---|---|
    | `<日期>-<主题>.md` (草稿) | 结论进了 CR 第 1 / 4 节; docs review 车道 A 已拿它核过现状 | 删 |
-   | `spec.md` | 分步落点 (提交 hash) 已填进 CR 第 5 节 | 删; 上线检查单没走完则留 |
-   | (`release/CR-NNN-<slug>.md` 不在这张表里: 它与 cr/ 同级, prune 不碰它, 上线做完之后由用户决定留否) | | |
+   | `spec.md` | 分步落点 (提交 hash) 已填进 CR 第 5 节 | 删. §8 上线检查单里还没走完的条目**先移进 `release/`** 再删 |
    | `seed*.sql` | 文件头执行记录填了 `env= date= rows=`, 那段 SQL 真跑过了 | 删; 没跑过则留 (脚本会拦) |
    | `reviews/0N-*.md` | 教训已提炼成 L-x 进 lessons.md | 删 |
 
-   这张表是照着实际内容填的, 不是抄模板. 有任何一项没落地 -- 草稿里的结论没进 CR, spec 里有还没
-   执行的上线步骤, 上线产物里有还没做的部署动作, 某段 SQL 还没在任何环境跑过, 某条发现既没
-   提炼也没写 "无可提炼" 的理由 -- 在表里写明, 建议保留, 并说清缺口在哪.
+   (`release/CR-NNN-<slug>.md` 不在这张表里: 它与 `cr/` 同级, prune 不碰它. 上线做完之后由用户
+   决定归档还是留着.)
+
+   这张表是照着实际内容填的, 不是抄模板. 有任何一项没落地就**先把它落地**, 而不是把承载它的
+   过程文件留下来: 草稿里的结论没进 CR 就补进 CR; spec 里有还没执行的上线步骤、上线产物里有还没
+   做的部署动作, 就把那几条移进 `release/`; 某条发现既没提炼也没写 "无可提炼" 的理由, 就回第 2 步
+   补完. 只有一种东西移不走: 还没在任何环境跑过的 `seed*.sql` -- 那个脚本本来就会拦.
 
    顺带核一件事: `seed*.sql` 里那段 SQL 是不是**本来就该在项目仓库里** (代码依赖的参考数据 /
    环境相关的配置). 是的话删掉它就等于新环境再也建不起来 -- 不是 "留着", 是提出来让用户决定
    把它挪进迁移或项目的 seed 目录 (归宿四类见 `../sdd/references/conventions.md` "手工 SQL").
 
-   **6b 问**: 把表给用户, 问哪些删哪些留. 不要替用户决定, 也不要因为闸门过了就默认全删.
-
-   **6c 删**: 按回答执行 `sdd.py prune CR-NNN`; 要留某项加 `--keep spec` (可给多次, 取值
-   `draft` / `spec` / `seed` / `reviews`; `spec` 一项只管 `spec.md` (上线产物在 `release/` 下, 不归 prune 管),
-   `seed` 管工作目录下的全部 `*.sql`).
+   **6b 删**: `sdd.py prune CR-NNN`. **不要为了 "上线还没做完" 而问用户留哪个** -- 归宿已经在
+   6a 判完了, 该移的移进了 `release/`, 剩下的按定义就是过程产物. 真正要问用户的只有一种情况:
+   某样东西既落不进入库文档、也移不进 `release/`, 说清它是什么、缺口在哪, 再问.
+   `--keep` (取值 `draft` / `spec` / `seed` / `reviews`) 留给那种情况, 不是常规路径.
    不要手动 rm -- 走命令才有那六道闸门挡着.
 
    删干净后这个 CR 只剩两样痕迹: CR 第 5 节的 review 状态与落点行, 与 lessons.md 里的来源.

@@ -46,7 +46,7 @@ REQ 第 10 节的开放问题必须在 implemented 前清空, 而自动推进期
 | `/implement-cr CR-NNN` (处理发现) | 自己做, 逐条处置 |
 | `/implement-cr CR-NNN` (分步实施) | 自己做, TDD, 整段做完提交一次 |
 | `/implement-cr CR-NNN` (落实) | **停** -- 到终点了, 出 OQ 清单 |
-| `/review-cr CR-NNN distill` | **停** -- distill 要问用户删哪些文件 |
+| `/review-cr CR-NNN distill` | **停** -- 它在落实之后, 而落实就是终点 |
 
 只有 review 外包, 写的活自己干. 写的活并行需要 worktree 隔离, 而 spec 与分步实施本来就是串行依赖,
 拆开只会制造冲突.
@@ -148,7 +148,7 @@ OQ 一条都没有时明说 "无 OQ", 别省略这一节 -- 用户要能区分 "
 ## 不做
 
 - 不落实 REQ, 不置 CR fixed (OQ 没确认之前 REQ 不能 implemented)
-- 不 distill, 不删任何工作目录文件 (那一步要问用户)
+- 不 distill, 不删任何工作目录文件 (它在落实之后, 而落实是终点)
 - 不 push, 不开 PR, 不合并分支
 - 不并行写代码 (只并行 review)
 - 不改 `../sdd/references/` 下的约定去迁就当前这个 CR
