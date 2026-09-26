@@ -50,6 +50,8 @@ spec §4 表里填没填提交 hash), 不是 agent 自述. 所以换个会话接
 - **上线密钥只写进 `_secret/`**. 值只放 `docs/sdd/_secret/CR-NNN-<slug>.env` (由 `docs/sdd/.gitignore`
   排除, `sdd.py init` 补), release 文件 / seed SQL / spec / review 只写变量名和 "值见 `_secret/...`";
   从生产读回来的值也一样. 兼作标识的 key (如 Fireblocks API user 的 UUID) 也算密钥.
+  提交前 `sdd.py secret-scan --staged` 拿这些真值逐字比对 (docs/sdd 是独立仓库时 `init` 装成
+  pre-commit hook); 上线做完也别删 `_secret/` 里的文件, 它们是比对来源.
 - **跨文档引用不写工作目录的路径**. 引用 review 写 `CR-NNN D-2` -- `work/` 提炼后整个删掉, 路径会失效.
 - **review 是软闸门**. 下一阶段发现上一阶段 review 缺失或未 fixed 时, 停下来说明; 只有
   用户明确说 "跳过" 才继续.

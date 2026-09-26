@@ -6,7 +6,10 @@
 文档根默认 docs/sdd (从当前目录向上查找), 可用 --root 或环境变量 SDD_ROOT 覆盖.
 
 子命令:
-  init                    建目录 + INDEX + 把 _secret/ 加进 .gitignore (约定只在 skill 里, 不放 README)
+  init                    建目录 + INDEX + 把 _secret/ 加进 .gitignore (约定只在 skill 里, 不放 README);
+                          docs/sdd 自己是 git 仓库时再装 pre-commit hook 跑 secret-scan --staged
+  secret-scan [--staged]  拿 _secret/ 里 (及 _secret/sources 列出的本机文件) 的密钥真值逐字比对
+                          跟踪的文件; --staged 只扫暂存区新增的行并加跑 gitleaks. 命中退出 1, 不回显值
   status [CR-NNN] [--write]  全局状态; 给 CR 时输出 8 关的进度表 (每关带文件证据) 与下一步;
                           --write 另把这份表写进工作目录的 PROGRESS.md
   next-id REQ|CR          下一个可用编号
@@ -433,11 +436,210 @@ def ensure_secret_ignored(base):
     print("已把 %s/ 加进 %s" % (SECRET_DIR, path))
 
 
+# ---------- 密钥真值比对 ----------
+# gitleaks 按格式认密钥, 认不出 UUID 形状的 key (Fireblocks 的 API key 就是 API user 的
+# UUID). 这里拿 _secret/ 里的真值 (外加 _secret/sources 列出的本机文件或目录) 逐字比对,
+# 输出只写文件, 行号和变量名, 不回显值 -- 回显一次就等于又泄漏一次.
+
+SECRET_SOURCES_FILE = "sources"
+# 按用途认: 变量名得像凭据, 且不是指向凭据的文件名 / 引用 / 指纹 / 标识.
+_SECRET_NAME = re.compile(r"KEY|SECRET|TOKEN|PASSWORD|PASSWD|PRIVATE|CREDENTIAL|DSN|DATABASE_URL", re.I)
+_NOT_SECRET_NAME = re.compile(r"(_FILE|_PATH|_REF|_FINGERPRINT|_ID|_URL)$", re.I)
+# dotenv 语义: 值在引号里, 或者不带引号时到空白 / 行尾注释为止.
+_ASSIGNMENT = re.compile(r"""^\s*(?:export\s+)?([A-Za-z_][A-Za-z0-9_]*)\s*=\s*(?:"([^"]*)"|'([^']*)'|([^\s#]*))""")
+_JSON_PAIR = re.compile(r'"([A-Za-z_][A-Za-z0-9_]*)"\s*:\s*"([^"]*)"')
+_URL_PASSWORD = re.compile(r"^[a-z][a-z0-9+.-]*://[^:/@\s]+:([^@\s]+)@", re.I)
+_PUBLIC_SUFFIXES = (".pub", ".csr", ".crt", ".cer")  # 公钥 / CSR / 证书不是机密
+_MIN_SECRET_LEN = 12
+HOOK_MARKER = "# sdd secret-scan (sdd.py init)"
+
+
+def _read_small_text(path):
+    try:
+        if os.path.getsize(path) > 20 * 1024 * 1024:
+            return None
+        with open(path, "rb") as f:
+            return f.read().decode("utf-8")
+    except (OSError, UnicodeDecodeError):
+        return None  # zip 之类的二进制不是比对对象
+
+
+def _secret_value(name, value):
+    value = value.strip()
+    m = _URL_PASSWORD.match(value)
+    if m:
+        return m.group(1) if len(m.group(1)) >= _MIN_SECRET_LEN else None
+    if not _SECRET_NAME.search(name) or _NOT_SECRET_NAME.search(name):
+        return None
+    if len(value) < _MIN_SECRET_LEN or value.startswith("/") or re.fullmatch(r"https?://\S+", value):
+        return None
+    return value
+
+
+def _secret_source_files(root):
+    sdir = os.path.join(root, SECRET_DIR)
+    entries = [sdir]
+    listing = os.path.join(sdir, SECRET_SOURCES_FILE)
+    for line in (_read_small_text(listing) or "").splitlines():
+        line = line.split("#", 1)[0].strip()
+        if line:
+            entries.append(os.path.expanduser(line))
+    files = []
+    for e in entries:
+        if os.path.isfile(e):
+            files.append(e)
+        elif os.path.isdir(e):
+            for dp, _, fns in os.walk(e):
+                files += [os.path.join(dp, fn) for fn in sorted(fns)]
+    return [f for f in files if os.path.abspath(f) != os.path.abspath(listing)
+            and not f.lower().endswith(_PUBLIC_SUFFIXES)]
+
+
+def load_secret_needles(root):
+    """{真值: 标签}; 标签是变量名加来源文件, 用来报告, 不含值."""
+    needles = {}
+    home = os.path.expanduser("~")
+    for path in _secret_source_files(root):
+        text = _read_small_text(path)
+        if text is None:
+            continue
+        where = os.path.relpath(path, root) if os.path.abspath(path).startswith(os.path.abspath(root) + os.sep) \
+            else path.replace(home, "~", 1)
+        found = []
+        if "PRIVATE KEY-----" in text:
+            body = [l.strip() for l in text.splitlines() if l.strip() and not l.startswith("-----")]
+            found += [("私钥第 %d 行" % (i + 1), l) for i, l in enumerate(body) if len(l) >= 40]
+        else:
+            for line in text.splitlines():
+                m = _ASSIGNMENT.match(line)
+                pairs = [(m.group(1), next(g for g in m.groups()[1:] if g is not None))] if m else []
+                pairs += _JSON_PAIR.findall(line)
+                found += [(n, _secret_value(n, v)) for n, v in pairs]
+            lines = [l.strip() for l in text.splitlines() if l.strip()]
+            if not found and len(lines) == 1 and len(lines[0]) >= 16 and " " not in lines[0]:
+                found.append(("整个文件", lines[0]))  # 单行的 token 文件, 如 JWT
+        for name, value in found:
+            if value and value not in needles:
+                needles[value] = "%s (%s)" % (name, where)
+    return needles
+
+
+def _git(root, *args):
+    return subprocess.run(["git", "-C", root] + list(args), check=True, capture_output=True, text=True).stdout
+
+
+def _tracked_texts(root):
+    for rel in _git(root, "ls-files", "-z").split("\0"):
+        path = os.path.join(root, rel)
+        if rel and os.path.isfile(path) and not os.path.islink(path):
+            text = _read_small_text(path)
+            if text is not None:
+                yield rel, 1, text
+
+
+def _staged_texts(root):
+    """暂存区里新增的行, 按 hunk 聚成一段, 带上起始行号."""
+    rel, start, buf = None, 1, []
+    for line in _git(root, "diff", "--cached", "-U0", "--no-color", "--no-ext-diff", "--relative").splitlines():
+        if line.startswith("+++ ") or line.startswith("@@"):
+            if rel and buf:
+                yield rel, start, "\n".join(buf)
+            buf = []
+            if line.startswith("+++ "):
+                rel = line[6:] if line.startswith("+++ b/") else None
+            else:
+                m = re.search(r"\+(\d+)", line)
+                start = int(m.group(1)) if m else 1
+        elif line.startswith("+") and rel:
+            buf.append(line[1:])
+    if rel and buf:
+        yield rel, start, "\n".join(buf)
+
+
+def _gitleaks_staged(root):
+    """暂存区再过一遍 gitleaks (有就跑): 格式明显的密钥它认得, 真值比对认不出没见过的值."""
+    exe = shutil.which("gitleaks")
+    if not exe:
+        print("secret-scan: 本机没有 gitleaks, 只做真值比对")
+        return True
+    cmd = [exe, "git", "--staged", "--no-banner", "--redact", "--verbose", "--exit-code", "3"]
+    cfg = os.path.join(root, ".gitleaks.toml")
+    if os.path.exists(cfg):
+        cmd += ["--config", cfg]
+    r = subprocess.run(cmd + [root], capture_output=True, text=True)
+    if r.returncode == 3:
+        print(r.stdout + r.stderr)
+        return False
+    if r.returncode != 0:
+        print("secret-scan: gitleaks 没跑起来 (退出码 %d), 只做真值比对:\n%s" % (r.returncode, (r.stderr or r.stdout).strip()[-400:]))
+    return True
+
+
+def cmd_secret_scan(args):
+    sys.exit(_secret_scan(args))
+
+
+def _secret_scan(args):
+    root = need_root(args)
+    try:
+        _git(root, "rev-parse", "--git-dir")
+    except (subprocess.CalledProcessError, FileNotFoundError):
+        die("%s 不在 git 仓库里, 没有要扫的东西." % root)
+    gitleaks_ok = _gitleaks_staged(root) if args.staged else True
+    needles = load_secret_needles(root)
+    scope = "暂存区新增的行" if args.staged else "跟踪的文件"
+    if not needles:
+        print("secret-scan: %s/ 里没有密钥真值, 跳过真值比对" % SECRET_DIR)
+        return 0 if gitleaks_ok else 1
+    hits = set()
+    for rel, start, text in (_staged_texts(root) if args.staged else _tracked_texts(root)):
+        for value, label in needles.items():
+            pos = text.find(value)
+            while pos != -1:
+                hits.add("%s:%d: %s" % (rel, start + text.count("\n", 0, pos), label))
+                pos = text.find(value, pos + 1)
+    if hits:
+        print("secret-scan: 在%s里找到 %d 处密钥真值:" % (scope, len(hits)))
+        for h in sorted(hits):
+            print("  " + h)
+        print("值只留在 %s/, 文档里写变量名和 \"值见 %s/...\"." % (SECRET_DIR, SECRET_DIR))
+        return 1
+    print("secret-scan: 比对了 %d 个真值, %s里没有" % (len(needles), scope))
+    return 0 if gitleaks_ok else 1
+
+
+def ensure_secret_hook(base):
+    """docs/sdd 自己是一个 git 仓库时, 装 pre-commit hook 跑 secret-scan --staged."""
+    try:
+        top = _git(base, "rev-parse", "--show-toplevel").strip()
+        hooks = _git(base, "rev-parse", "--git-path", "hooks").strip()
+    except (subprocess.CalledProcessError, FileNotFoundError):
+        return
+    if os.path.realpath(top) != os.path.realpath(base):
+        print("提示: %s 在项目仓库 %s 里, 不自动装 hook; 把 `sdd.py secret-scan --staged` 接进项目自己的 pre-commit" % (base, top))
+        return
+    hooks = hooks if os.path.isabs(hooks) else os.path.join(top, hooks)
+    path = os.path.join(hooks, "pre-commit")
+    if os.path.exists(path) and HOOK_MARKER not in (_read_small_text(path) or ""):
+        print("提示: %s 已有别的 pre-commit, 没有覆盖; 自己把 `sdd.py secret-scan --staged` 加进去" % path)
+        return
+    os.makedirs(hooks, exist_ok=True)
+    script = os.path.abspath(__file__)
+    body = ("#!/bin/sh\n%s\n# sdd.py 不在这个路径了就重跑一次 sdd.py init.\n"
+            "exec python3 '%s' --root \"$(git rev-parse --show-toplevel)\" secret-scan --staged\n" % (HOOK_MARKER, script))
+    if (_read_small_text(path) or "") != body:
+        with open(path, "w", encoding="utf-8") as f:
+            f.write(body)
+        os.chmod(path, 0o755)
+        print("已装 pre-commit hook: %s" % path)
+
+
 def cmd_init(args):
     base = os.path.abspath(args.root or os.path.join(os.getcwd(), "docs", "sdd"))
     for sub in ("req", "cr", "draft", "work", "release"):
         os.makedirs(os.path.join(base, sub), exist_ok=True)
     ensure_secret_ignored(base)
+    ensure_secret_hook(base)
     write_index(base)
     print("完成. 目录:", base)
 
@@ -1210,6 +1412,8 @@ def main():
     _add = sub.add_parser
     sub.add_parser = lambda name, **kw: _add(name, parents=[common], **kw)
     sub.add_parser("init").set_defaults(fn=cmd_init)
+    s = sub.add_parser("secret-scan"); s.add_argument("--staged", action="store_true", help="只扫暂存区新增的行 (pre-commit 用)")
+    s.set_defaults(fn=cmd_secret_scan)
     s = sub.add_parser("status"); s.add_argument("cr", nargs="?")
     s.add_argument("--write", action="store_true",
                    help="把这个 CR 的进度表写进工作目录的 PROGRESS.md (人随时翻, 不必问 agent)")

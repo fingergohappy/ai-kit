@@ -198,12 +198,22 @@ PROVIDER_API_SECRET    值见 _secret/CR-NNN-<slug>.env
   里那段" 以及跑过没有.
 - 从生产读回来的值 (控制台、API 实测、部署 secret) 同样适用: 核查记录只写变量名与 "已核,
   与 `_secret/` 一致", 不抄值.
-- 归档 release 时 `_secret/` 不跟着搬; 上线做完删掉对应文件, 或按需留在本机.
-- gitleaks 抓不到 UUID 形状的 key, 提交前拿 `_secret/` 里的值逐字搜一遍暂存区, 有输出就别提交:
+- 归档 release 时 `_secret/` 不跟着搬. 上线做完也留着: 它们是下面 `secret-scan` 的比对来源,
+  删了就查不出这些值又混进了文档.
 
-```sh
-git diff --cached -U0 | grep -nFf <(grep -hoP '^[A-Z0-9_]+=\K\S{16,}' _secret/*.env 2>/dev/null)
-```
+**提交前的扫描: `sdd.py secret-scan`**. gitleaks 按格式认密钥, 认不出 UUID 形状的 key, 所以
+这里拿真值逐字比对: 来源是 `_secret/` 下的所有文件, 外加 `_secret/sources` 里列出的本机文件或
+目录 (一行一个, 可写 `~`, `#` 起注释; 比如上线时拿到的凭据放在 `~/.xxx-secrets/` 就列进来).
+只认变量名像凭据的值 (`KEY` / `SECRET` / `TOKEN` / `PASSWORD` / `PRIVATE` / `CREDENTIAL`, 不含
+`_ID` / `_REF` / `_FILE` / `_URL` 结尾的), 连接串里的口令, 私钥正文和单行 token 文件. 命中时
+只报 `文件:行号` 与变量名, 不回显值.
+
+- `sdd.py secret-scan --staged`: 只扫暂存区新增的行, 有 gitleaks 就加跑一遍 (用 docs/sdd 下的
+  `.gitleaks.toml`, 有的话). docs/sdd 自己是一个 git 仓库时, `sdd.py init` 把它装成 pre-commit
+  hook; docs/sdd 在项目仓库里时不自动装, 由项目把这条接进自己的 pre-commit.
+- `sdd.py secret-scan`: 扫所有跟踪的文件, 新加了真值来源之后跑一次, 查历史上有没有已经写进去的.
+- gitleaks 在供应商文档快照里会报一堆示例值 (`YOUR_API_KEY` 之类). 放过它们写进 `.gitleaks.toml`,
+  按文件或按值精确放过, 不要整个 `ref/` 放过 -- 生产样本也会放进那里.
 
 ### 手工 SQL: 先判归宿, 再决定放哪
 
