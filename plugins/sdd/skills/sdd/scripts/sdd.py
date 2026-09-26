@@ -6,7 +6,7 @@
 文档根默认 docs/sdd (从当前目录向上查找), 可用 --root 或环境变量 SDD_ROOT 覆盖.
 
 子命令:
-  init                    建目录 + INDEX (约定只在 skill 里, 不放 README)
+  init                    建目录 + INDEX + 把 _secret/ 加进 .gitignore (约定只在 skill 里, 不放 README)
   status [CR-NNN] [--write]  全局状态; 给 CR 时输出 8 关的进度表 (每关带文件证据) 与下一步;
                           --write 另把这份表写进工作目录的 PROGRESS.md
   next-id REQ|CR          下一个可用编号
@@ -417,10 +417,27 @@ def spec_steps(path):
 
 # ---------- 子命令 ----------
 
+SECRET_DIR = "_secret"
+
+
+def ensure_secret_ignored(base):
+    """_secret/ 放上线用的密钥值, 永不入库; init 负责让 docs/sdd/.gitignore 排除它."""
+    path = os.path.join(base, ".gitignore")
+    text = open(path, encoding="utf-8").read() if os.path.exists(path) else ""
+    if any(l.strip() in (SECRET_DIR, SECRET_DIR + "/", "/" + SECRET_DIR + "/") for l in text.splitlines()):
+        return
+    with open(path, "a", encoding="utf-8") as f:
+        if text and not text.endswith("\n"):
+            f.write("\n")
+        f.write(SECRET_DIR + "/\n")
+    print("已把 %s/ 加进 %s" % (SECRET_DIR, path))
+
+
 def cmd_init(args):
     base = os.path.abspath(args.root or os.path.join(os.getcwd(), "docs", "sdd"))
     for sub in ("req", "cr", "draft", "work", "release"):
         os.makedirs(os.path.join(base, sub), exist_ok=True)
+    ensure_secret_ignored(base)
     write_index(base)
     print("完成. 目录:", base)
 

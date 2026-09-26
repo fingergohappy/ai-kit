@@ -20,6 +20,8 @@ docs/sdd/
 │   └── CR-NNN-<slug>.seed[-<名字>].sql  # 要人手跑且跑完即弃的 SQL (归宿见下节)
 │                             #   都不住 work/ -- work/ 提炼后整个删掉, 而这两样要活到上线真做完:
 │                             #   核查单、迁移的上一版兼容判断、跑过的命令与输出、还没跑的那段 SQL
+├── _secret/                  # 上线要配的密钥值, 只在本机: docs/sdd/.gitignore 排除, 永不入库 (见 "上线用到的密钥")
+│   └── CR-NNN-<slug>.env     #   一行一个 NAME=value; 要贴整段的命令 (patch secret 之类) 也放这里
 └── work/CR-NNN-<slug>/       # 立了 CR 之后, 一个变更一个文件夹 (入库)
     ├── <日期>-<主题>.md      # 草稿 / 侦察, 与 spec review 平级 (从 draft/<slug>/ 并进来)
     ├── spec.md               # 实施 spec: 改哪里, 按什么顺序, 怎么测, 怎么上线
@@ -175,6 +177,33 @@ review 是软闸门: 跳过某次 review 直接往下走需要人明确说 "跳�
 模板的语言, 不是这里的约定. PR 正文仍是英文: 开 PR 时把这份文件翻成英文再贴, 翻的只是中文
 正文, 上面那几类原样保留. 事实只有这一份来源, PR 正文是它的译文; 上线时和上线后回来核对
 的是这份文件, 不是 PR.
+
+### 上线用到的密钥: 只写进 `_secret/`
+
+上线要配、要核的密钥, **值只能写在 `docs/sdd/_secret/` 下**, 这个目录由 `docs/sdd/.gitignore`
+排除 (`sdd.py init` 会补上这一行). release 文件、seed SQL、spec、review、草稿里一律不写值,
+只写变量名和值在哪:
+
+```
+PROVIDER_API_SECRET    值见 _secret/CR-NNN-<slug>.env
+```
+
+"密钥" 按用途认, 不按名字认: API key / secret / token / 私钥 / 证书 / webhook 签名密钥 /
+数据库密码都算; 兼作标识的也算 (例如 Fireblocks 的 API key 就是 API user 的 UUID, 会原样
+出现在 webhook 与控制台导出里). 理由: release 文件会整份贴进 PR 正文, 还会跟着 docs/sdd 推上
+远程, 值一旦进了远程历史就收不回来.
+
+- 文件跟 release 同号: `_secret/CR-NNN-<slug>.env`, 一行一个 `NAME=value`. 要整段复制去跑的
+  命令 (如 `kubectl patch secret`) 也放这里, release 里只写 "跑 `_secret/CR-NNN-<slug>.env`
+  里那段" 以及跑过没有.
+- 从生产读回来的值 (控制台、API 实测、部署 secret) 同样适用: 核查记录只写变量名与 "已核,
+  与 `_secret/` 一致", 不抄值.
+- 归档 release 时 `_secret/` 不跟着搬; 上线做完删掉对应文件, 或按需留在本机.
+- gitleaks 抓不到 UUID 形状的 key, 提交前拿 `_secret/` 里的值逐字搜一遍暂存区, 有输出就别提交:
+
+```sh
+git diff --cached -U0 | grep -nFf <(grep -hoP '^[A-Z0-9_]+=\K\S{16,}' _secret/*.env 2>/dev/null)
+```
 
 ### 手工 SQL: 先判归宿, 再决定放哪
 

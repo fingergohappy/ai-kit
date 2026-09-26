@@ -47,6 +47,9 @@ spec §4 表里填没填提交 hash), 不是 agent 自述. 所以换个会话接
 - **手工 SQL 先判归宿**. 代码依赖的参考数据进迁移, 环境相关的配置进项目里入库的 seed 脚本,
   开发夹具进 fixture; 只有 "跑完即弃" 的一次性回填 / 修复才放 `release/CR-NNN-<slug>.seed.sql`
   (`sdd.py new-seed`) -- 与上线产物并排, 跑它的人和读发布说明的是同一个人. 判定写进 spec §3.
+- **上线密钥只写进 `_secret/`**. 值只放 `docs/sdd/_secret/CR-NNN-<slug>.env` (由 `docs/sdd/.gitignore`
+  排除, `sdd.py init` 补), release 文件 / seed SQL / spec / review 只写变量名和 "值见 `_secret/...`";
+  从生产读回来的值也一样. 兼作标识的 key (如 Fireblocks API user 的 UUID) 也算密钥.
 - **跨文档引用不写工作目录的路径**. 引用 review 写 `CR-NNN D-2` -- `work/` 提炼后整个删掉, 路径会失效.
 - **review 是软闸门**. 下一阶段发现上一阶段 review 缺失或未 fixed 时, 停下来说明; 只有
   用户明确说 "跳过" 才继续.
