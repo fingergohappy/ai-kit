@@ -144,6 +144,7 @@ Tmux infrastructure utilities for inter-pane communication and long-running serv
 |-------|---------|
 | `tmux:tmux-dispatch` | Write the task to a channel document and point another pane's agent at it, stamping a reply channel |
 | `tmux:tmux-reply` | Append the report to that same document and knock on the pane that dispatched the task |
+| `tmux:lane-lead` | Be the lead: talk with the user, start Claude Code workers as windows in your own tmux session, dispatch each its brief, relay checked reports |
 | `tmux:agent-tmux` | Start/restart/stop long-running commands in shared tmux session (auto-isolates by project/branch) |
 
 ### git
