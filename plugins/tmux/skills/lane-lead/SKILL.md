@@ -1,7 +1,7 @@
 ---
 name: lane-lead
 description: |
-  Act as the lead: you talk with the user, and the actual work goes to Claude Code workers you start as new windows in your own tmux session, one window per job. Covers taking stock before handing anything off (also after a crash or reboot cut running lanes short), launching each worker so it runs unattended under the same account and permissions as you, writing and dispatching its brief, keeping every decision and every outward-facing action with the user, relaying reports after checking them, and closing windows only when asked. Use whenever the user says "开个 window 去修", "启动个 claude 去做", "你派出去", "在这个 session 里开窗口处理", "你负责和我沟通, 活派给 claude", "帮我看下派出去的做完没有", "电脑关机了, 看下车道到哪了", "spin up a claude for this", "hand this to a new window". For codex / pi in the separate `agents` session use `agent-crew`; for the brief itself and its delivery use `tmux-dispatch`.
+  Act as the lead: you talk with the user, and the actual work goes to Claude Code workers you start as new windows in your own tmux session, one window per job. Covers taking stock before handing anything off (also after a crash or reboot cut running lanes short), launching each worker so it runs unattended under the same account and permissions as you, writing and dispatching its brief, keeping business decisions with the user and outward-facing actions with you, relaying reports after checking them, and, when a lane's PR passes every check with nothing left for the user, merging it and closing the lane without asking. Use whenever the user says "开个 window 去修", "启动个 claude 去做", "你派出去", "在这个 session 里开窗口处理", "你负责和我沟通, 活派给 claude", "帮我看下派出去的做完没有", "电脑关机了, 看下车道到哪了", "spin up a claude for this", "hand this to a new window". For codex / pi in the separate `agents` session use `agent-crew`; for the brief itself and its delivery use `tmux-dispatch`.
 argument-hint: "[<the work>]"
 disable-model-invocation: false
 ---
@@ -54,9 +54,9 @@ A lead's brief carries a few things a plain hand-off doesn't:
 
 - **What is already done and where it stopped.** Name the commit, the uncommitted diff, the root cause already found, and the repro already run, so the lane continues instead of starting over.
 - **Which questions come back to you.** Business semantics, anything that reverses a decision the user already made, a new config switch, touching production code where only a test fix was expected. List the ones you can foresee, quoting the code comment or ticket line that marks them as decided.
-- **Outward-facing actions are drafts.** Jira or PR comments, emails and status transitions are written into the report for the user to approve, never posted by the lane. Merging is the user's.
+- **Outward-facing actions are drafts.** Jira or PR comments, emails and status transitions are written into the report for you, never posted by the lane. The lane doesn't merge either: merging is yours (section 5) or the user's.
 - **The other lanes, by name and path**, as off limits.
-- **The finish line**: the commands that must pass, the PR to open, and the status to knock back with (`QUESTION: 待合` when a PR waits for the user's merge).
+- **The finish line**: the commands that must pass, the PR to open, and the status to knock back with (`QUESTION: 待合` when a PR is waiting to be merged).
 
 Dispatch them all, then tell the user in one table: window, pane, tree, job, and what will come back to them. Then stop. Don't poll; the lanes knock back through `tmux-reply`.
 
@@ -65,8 +65,25 @@ Dispatch them all, then tell the user in one table: window, pane, tree, job, and
 - **The user asks "what is X about?"**: answer from what you already know (the ticket, the brief, the code), in plain language with the concrete numbers. Don't interrupt a lane to ask it.
 - **A lane knocks back `QUESTION:`**: put it to the user as background first, then the options and your recommendation, one question at a time. Append the user's answer as a `## Follow-up` in that lane's document and dispatch the path again. Before sending, `capture-pane` the lane once. If it has a menu open ("Enter to select"), your Enter would pick an option for it.
 - **`BLOCKED:`**: unblock it yourself if it's mechanical (a missing tunnel, a stale branch); otherwise it's a question for the user.
-- **`DONE:`**: a claim. Read the `## Report`, look at the diff or PR, check the command output it quotes. Then relay the result, the evidence and what it skipped. Relaying only the status line passes on something you haven't checked.
+- **`DONE:`** (or `QUESTION: 待合`): a claim. Read the `## Report`, look at the diff or PR, check the command output it quotes. Then relay the result, the evidence and what it skipped. Relaying only the status line passes on something you haven't checked. If it holds up and nothing is left for the user, go straight on to section 5.
 
-## 5. Closing windows
+## 5. No problems: merge and close on your own
 
-The windows sit in the user's own session, next to their other work. When a lane has finished and its result is relayed, **ask** before closing it. The user may want to read its reasoning or keep using it. On a yes, close **by pane id**, one at a time (`tmux kill-pane -t %7`), since window indexes shift when renumbering is on. Never close a pane you didn't start, including the one the user resumed themselves.
+When a lane comes back with a PR waiting to merge and nothing in it needs the user, merge it and close the lane yourself, then tell the user what you did. Don't ask "should I merge?" for work that has already passed every check. That question makes the user re-review something you've already reviewed.
+
+**"No problems" means all of these, checked by you, not taken from the report:**
+
+- The report's claims hold up against the PR: the diff is what the brief asked for, and the gate output it quotes is real.
+- Gates are green. Any red is a known flake or known tool drift that the lane reproduced on the base and disclosed in the PR.
+- The review round is closed: no open findings, and every fix has been rechecked.
+- Nothing is waiting on the user: no `QUESTION:` about business semantics, no reversed decision, nothing the project says needs approval first (a new environment variable, a migration that tightens schema, a database function or trigger, a merge into a release or production branch).
+
+If any of these fail, it's not yours to merge: put that one item to the user, as in section 4.
+
+**Merge the way the project merges.** Read its merge rules first: the required checks, the allowed merge method, what to do when the base has moved, and which repo goes first when one PR depends on another (a contract repo before the code that locks it). If the base moved since the lane's gates ran, merge the base into the branch and at least build and vet it before you merge. A PR that went green on its own can still break the base together with what landed meanwhile. After merging, confirm whatever auto-deploys picked up the merge.
+
+**Then close up after it.** Close that lane's window, and the review windows that served only that lane, **by pane id** (`tmux kill-pane -t %7`), since window indexes shift when renumbering is on. Clean up its worktree if the project's rules say merged worktrees go. Do the follow-ups the brief deferred to after the merge: an approved tracker comment, a doc line, a reminder you recorded. Report in one block: merged what (PR and merge commit), closed which panes, what you posted.
+
+## 6. Closing windows in every other case
+
+The windows sit in the user's own session, next to their other work. Outside section 5, when a lane has finished and its result is relayed, **ask** before closing it, because the user may want to read its reasoning or keep using it. Close by pane id, one at a time. Never close a pane you didn't start, including one the user resumed themselves.
