@@ -82,7 +82,12 @@ If any of these fail, it's not yours to merge: put that one item to the user, as
 
 **Merge the way the project merges.** Read its merge rules first: the required checks, the allowed merge method, what to do when the base has moved, and which repo goes first when one PR depends on another (a contract repo before the code that locks it). If the base moved since the lane's gates ran, merge the base into the branch and at least build and vet it before you merge. A PR that went green on its own can still break the base together with what landed meanwhile. After merging, confirm whatever auto-deploys picked up the merge.
 
-**Then close up after it.** Close that lane's window, and the review windows that served only that lane, **by pane id** (`tmux kill-pane -t %7`), since window indexes shift when renumbering is on. Clean up its worktree if the project's rules say merged worktrees go. Do the follow-ups the brief deferred to after the merge: an approved tracker comment, a doc line, a reminder you recorded. Report in one block: merged what (PR and merge commit), closed which panes, what you posted.
+**Then close up after it.** Close everything that lane started, **by pane id** (`tmux kill-pane -t %7`), since window indexes shift when renumbering is on:
+
+- the lane's own window in your session;
+- the codex / pi review windows it opened in the `agents` session (an sdd review lane, a one-round PR review). Find them with `tmux list-panes -a -F '#{pane_id} #{session_name}:#{window_name} #{pane_current_path}'`: they're named after the job, or sit in the lane's worktree. Also close the bare shell the lane left as that session's first window. A window serving another lane that's still running stays open.
+
+Before closing, copy the lane's channel documents somewhere that outlives its worktree, if the project keeps an archive for them. Clean up the worktree itself if the project's rules say merged worktrees go. Do the follow-ups the brief deferred to after the merge: an approved tracker comment, a doc line, a reminder you recorded. Report in one block: merged what (PR and merge commit), closed which panes, what you posted.
 
 ## 6. Closing windows in every other case
 

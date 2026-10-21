@@ -82,7 +82,12 @@ tmux list-windows -t <session> -F '#{window_index} #{window_name} #{pane_id}'
 
 **照项目的规矩合。** 先读项目的合并规则: 必需的检查、允许的合并方式、基线动过之后怎么办、一个 PR 依赖另一个时谁先合 (契约仓先于锁它的代码)。车道跑门禁之后基线又动过, 就先把基线合进分支, 至少 build 和 vet 一遍再合 —— 单独绿的 PR, 和这期间合进去的东西放在一起, 照样能把基线弄坏。合完确认自动部署拿到了这次合并。
 
-**然后收尾。** 关掉这条车道的窗口, 以及只为这条车道服务的评审窗口, **按 pane id** 关 (`tmux kill-pane -t %7`), 开着 renumber 时 window 序号会移位。项目规定合并后要删 worktree 的就删。把任务书里留到合并之后做的事做掉: 已批准的工单评论、文档里的一句话、你记下的提醒。最后用一段话汇报: 合了什么 (PR 和合并提交)、关了哪些 pane、发了什么。
+**然后收尾。** 这条车道开起来的东西全部关掉, **按 pane id** 关 (`tmux kill-pane -t %7`), 开着 renumber 时 window 序号会移位:
+
+- 你 session 里这条车道自己的窗口;
+- 它在 `agents` session 里开的 codex / pi 评审窗口 (sdd 的评审车道、一轮 PR 评审)。用 `tmux list-panes -a -F '#{pane_id} #{session_name}:#{window_name} #{pane_current_path}'` 找: 按任务命名, 或者停在这条车道的 worktree 里。车道顺手建 session 留下的那个空 shell 也一起关。还在为别的、仍在跑的车道服务的窗口不关。
+
+关之前, 项目有通道文档归档的, 先把这条车道的通道文档拷过去 (worktree 一删就没了)。项目规定合并后要删 worktree 的就删。把任务书里留到合并之后做的事做掉: 已批准的工单评论、文档里的一句话、你记下的提醒。最后用一段话汇报: 合了什么 (PR 和合并提交)、关了哪些 pane、发了什么。
 
 ## 6. 其它情况下关窗口
 
