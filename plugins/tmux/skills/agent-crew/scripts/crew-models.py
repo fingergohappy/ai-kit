@@ -182,7 +182,15 @@ def cmd_catalog(args):
         if tool == "codex":
             note = " (cache fetched %s)" % codex_catalog()[2]
         print("## %s%s" % (tool, note))
-        print("default: %s:%s:%s" % (tool, dm or "?", de or "?"))
+        if not dm:
+            # The tool's built-in default can't be read from disk (codex's isn't its top-priority
+            # model), so don't guess: a bare launch shows it in the window footer.
+            print("default: %s  (none configured: the tool's built-in default, shown in the window footer)" % tool)
+        elif not de:
+            de = models.get(dm, {}).get("default_effort", "")
+            print("default: %s:%s%s" % (tool, dm, ":%s  (the model's own default effort)" % de if de else ""))
+        else:
+            print("default: %s:%s:%s" % (tool, dm, de))
         for name in sorted(models):
             info = models[name]
             if tool == "codex" and not info["listed"]:
