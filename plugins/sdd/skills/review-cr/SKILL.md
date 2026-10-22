@@ -19,7 +19,8 @@ review 是这套流程里真正拦住问题的环节: 文档错了在 docs 阶�
    逐条对照本次对象. 发现命中时在发现栏注明 "命中 L-n", 提炼时次数才能累加.
    顺手数出对本 CR **适用**的车道有几条 (不适用的记下理由, 第 5 步填车道结论表要用).
    并行还是串行**读工作目录下的 `.parallel`** (`/create-cr` 立 CR 时问过并写下的): `yes` 就按
-   `## 并行审` 派窗口, `no` 或文件不存在就串行. 不要在这里重问 -- 那是干活中途打断用户.
+   `## 并行审` 派窗口, 阵容读同目录的 `.reviewers`; `no` 或文件不存在就串行. 不要在这里重问 --
+   那是干活中途打断用户.
 3. **从磁盘重读对象**. docs: CR + 影响的每份 REQ + 草稿; spec: spec.md + CR + REQ; impl: 基点到当前
    的代码 diff + spec + CR 的 AC, 并**实际跑测试**, 不看声明.
 4. **逐车道审**. 每条发现: 位置 (file:line 或条目号), 证据 (代码怎么写的 / 与哪条 AC 冲突), 级别
@@ -76,9 +77,11 @@ review 是这套流程里真正拦住问题的环节: 文档错了在 docs 阶�
 三次 review 都可以并行: 车道之间本来就互斥, 一个车道派一个 agent 各审各的, 最后合成一份.
 串行自审同样有效, 只是慢, 而且同一个模型把五个角度审一遍, 带着的还是同一个盲点.
 
-**走不走这条路不由这里决定**: `/create-cr` 立 CR 时已经问过用户, 答案在工作目录的 `.parallel` 里
-(`yes` / `no`; `sdd.py status CR-NNN` 也会显示). 第 2 步读它 -- `yes` 就照下面五步做, `no` 或
-读不到就回 `## 步骤` 第 4 步自己逐车道审. 两条路的产出文件与格式完全一样.
+**走不走这条路、用哪些模型不由这里决定**: `/create-cr` 立 CR 时已经问过用户, 答案在工作目录的
+`.parallel` (`yes` / `no`) 与 `.reviewers` (阵容, 一行一个 `<工具>:<模型>:<思考等级>`) 里,
+`sdd.py status CR-NNN` 也会显示. 第 2 步读它们 -- `yes` 就照下面五步做, `no` 或读不到就回
+`## 步骤` 第 4 步自己逐车道审. 两条路的产出文件与格式完全一样. `.parallel` 是 `yes` 而没有
+`.reviewers` (老 CR) 时, 阵容按 `codex` / `pi` 两个工具缺省算, 不补问.
 
 **不要在这里重问用户**. 三次 review 横跨好几天好几个会话, 每次问一遍就是每次打断; 一个 CR 只在
 立项时定一次策略. 用户中途想改主意, 改那个文件即可. `/auto-cr` 连文件都不读 -- 无人值守没人可问,
@@ -100,19 +103,23 @@ review 是这套流程里真正拦住问题的环节: 文档错了在 docs 阶�
 同一阶段内不新起: 首审起的这批一直用到这个阶段 `fixed`, 复核和下一轮重审都发回它们):
 
 ```sh
+S=<agent-crew skill 的绝对路径>/scripts/crew-models.py
+# 阵容现查一遍再分: 失效的 (模型没了 / 思考等级不支持 / 工具不在) 剔掉并打 "# dropped" 行, 其余轮流
+$S assign <窗口数> - < <工作目录>/.reviewers
 tmux has-session -t agents 2>/dev/null || tmux new-session -d -s agents
-# 一个车道一个窗口, 窗口名带车道号, 便于 tmux list-windows 一眼看出谁在审什么
-tmux new-window -t agents -n codex-CR-NNN-<stage>-A "cd <repo 绝对路径> && exec codex"
-tmux new-window -t agents -n pi-CR-NNN-<stage>-B    "cd <repo 绝对路径> && exec pi"
+# 一个车道一个窗口, 窗口名带工具与车道号, 便于 tmux list-windows 一眼看出谁在审什么
+tmux new-window -d -t agents -n codex-CR-NNN-<stage>-A "cd <repo 绝对路径> && exec $($S launch <pick>)"
 tmux list-panes -t agents:codex-CR-NNN-<stage>-A -F '#{pane_id}'
 ```
 
-裸启动, 不带模型 / 思考等级参数: 每个窗口用那个工具自己配置的默认模型 (见 `agent-crew` 的 "Models" 一节).
-只有用户在当次对话里点名某个模型才加参数, 并照抄用户给的完整 id. 启动后看一眼窗口底栏的实际模型, 合并 review 时写进车道结论.
+模型由 `.reviewers` 决定, 启动、核对底栏、自动替补都照 `agent-crew` 的 "Models" 一节, 不手拼参数.
+用户在当次对话里点名换模型, 照办并改写 `.reviewers`, 从下一次起窗口生效.
 
-**模型分配**: 车道之间交替换工具 (codex / pi 交替), 别让所有车道都用同一个工具 -- 同一个盲点审五遍还是那个盲点.
-要跑代码 / 跑测试的车道 (docs A, spec A, impl A / B / E) 优先给手上更强的那个.
-只有一个工具可用时全给它, 车道照样一个一个开.
+**模型分配**: 按 `assign` 输出的顺序给车道, 先排要跑代码 / 跑测试的车道 (docs A, spec A, impl A / B / E),
+这样它们拿到阵容第一条 (主力). 阵容里多于一个模型时相邻车道自然错开 -- 同一个盲点审五遍还是那个盲点.
+只剩一个可用模型时全给它, 车道照样一个一个开. 有替补 (`# dropped` 行, 或启动后额度耗尽换下一条)
+就写进合并 review 的车道结论: 哪个车道, 原定哪个, 换成哪个, 为什么. `.reviewers` 不改 --
+下一个阶段重新查, 额度恢复了就用回来.
 
 **工作树只能有一个人改.** impl 阶段的车道 E 要做变异验证 (改一行看红不红; 只改 diff 里的行, 只跑相关用例, 做法见 review-lanes.md),
 那是同批唯一被允许改工作树的窗口; 其余车道的 brief 里写明 "只读, 不跑测试, 判据一律取

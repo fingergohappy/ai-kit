@@ -896,12 +896,17 @@ def cr_state(root, cr):
     info = parse_cr(cr["path"])
     d = cr_dir(root, cr["id"])
     st = {"cr": cr, "status": info["status"], "dir": d, "spec": None, "reviews": {},
-          "parallel": None, "seeds": []}
+          "parallel": None, "reviewers": [], "seeds": []}
     st["seeds"] = seed_files(root, cr)
     if d:
         pf = os.path.join(d, ".parallel")
         if os.path.isfile(pf):
             st["parallel"] = read(pf).strip().lower() == "yes"
+        rf = os.path.join(d, ".reviewers")
+        if os.path.isfile(rf):
+            # review 阵容, 一行一个 <工具>:<模型>:<思考等级>; # 之后是注释
+            st["reviewers"] = [ln.split("#", 1)[0].strip() for ln in read(rf).splitlines()
+                               if ln.split("#", 1)[0].strip()]
         sp = os.path.join(d, "spec.md")
         if os.path.isfile(sp):
             st["spec"] = spec_steps(sp)
@@ -1074,7 +1079,9 @@ def render_cr_status(root, cr, st=None):
                                        for k, v in info["affects"].items()) or "(空!)"),
            "  工作目录: " + (st["dir"] or "(无)")]
     if st["parallel"] is not None:
-        out.append("  review 策略: " + ("并行 (按车道派给 codex / pi)" if st["parallel"] else "串行 (自审)"))
+        out.append("  review 策略: " + (
+            "并行 (按车道派窗口, 阵容: %s)" % (", ".join(st["reviewers"]) or "codex / pi 各用缺省")
+            if st["parallel"] else "串行 (自审)"))
     if st["seeds"]:
         # 上线要人手跑的那几段 SQL. 没跑完的是欠着的活, 得让翻 PROGRESS.md 的人一眼看见
         out.append("  手工 SQL: " + ", ".join(
@@ -1369,9 +1376,10 @@ def cmd_prune(args):
                 targets.append((os.path.join(d, fn), False))
     if "reviews" not in keep and os.path.isdir(rdir):
         targets.append((rdir, True))
-    pf = os.path.join(d, ".parallel")
-    if os.path.isfile(pf):
-        targets.append((pf, False))  # review 策略, CR 清理了就是孤儿
+    for fn in (".parallel", ".reviewers"):  # review 策略与阵容, CR 清理了就是孤儿
+        pf = os.path.join(d, fn)
+        if os.path.isfile(pf):
+            targets.append((pf, False))
     gp = os.path.join(d, PROGRESS_FILE)
     if os.path.isfile(gp):
         targets.append((gp, False))  # 进度表是生成物, 随时可再生

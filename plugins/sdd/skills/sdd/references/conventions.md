@@ -145,9 +145,10 @@ review: to fix -> fixing -> fixed -> (CR fixed 后) 提炼进 lessons.md -> 删�
 review 是软闸门: 跳过某次 review 直接往下走需要人明确说 "跳过", AI 不自行跳过.
 
 **六个命令里只有 review 能并行**. 三次 review 的车道之间本来就互斥, 可以一个车道派一个 agent
-并行审再合成一份 (怎么做见 `review-cr` 的 `## 并行审`). 用不用并行**在 `/create-cr` 立 CR 时问
-用户一次**, 答案写进工作目录的 `.parallel` (`yes` / `no`, `sdd.py status` 会显示); 三次 review
-都读它, 不重问 -- 三次 review 横跨好几天好几个会话, 每次问就是每次打断.
+并行审再合成一份 (怎么做见 `review-cr` 的 `## 并行审`). 用不用并行、用哪些模型**在 `/create-cr`
+立 CR 时问用户一次**, 答案写进工作目录的 `.parallel` (`yes` / `no`) 与 `.reviewers` (阵容, 一行一个
+`<工具>:<模型>:<思考等级>`), `sdd.py status` 会显示; 三次 review 都读它们, 不重问 -- 三次 review
+横跨好几天好几个会话, 每次问就是每次打断. 阵容里的模型每次起窗口前现查, 失效的自动替补并记进 review.
 环境不支持 (没 tmux, 或 codex / pi 都不在 PATH) 就不问也不写, 读不到即串行.
 `/draft` `/req` `/create-cr` `/spec` `/implement-cr` 都是串行的活: spec 是一份连贯文档, 拆开写
 会互相矛盾; 分步实施前后依赖, 并行只会制造冲突, 真要并行写还得先做 worktree 隔离.
