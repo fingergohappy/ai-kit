@@ -1,8 +1,8 @@
 ---
 name: agent-crew
 description: |
-  在专用的 `agents` tmux session 里让外部 CLI agent（codex、pi……）干活，一个 window 一个——不管是把一件事交给其中一个、把一件事拆给几个、让两个各做一遍同一道题作对照，还是让几个从不同角度审同一份东西。当用户说「让 codex 去做这个」「让 codex 和 pi 一起做」「起个 agent 跑一下」「让 pi 也做一遍看看」「起几个 agent 分头审」「多角度并行 review」「一个车道一个模型」「开几个窗口跑」时触发。本 skill 管的是：怎么把 window 起得能看见对方在想什么、各工具的模型参数、活怎么拆才不打架、写代码的 agent 怎么隔离才不互相毁、结果怎么收怎么验、跑完怎么收摊（问一句再关，别让 window 越堆越多）。每个 window 的任务书怎么写、怎么送，是 `tmux-dispatch` 的事。
-argument-hint: "[<要干的活>] [<交给谁: codex|pi|...>]"
+  在专用的 `agents` tmux session 里让外部 CLI agent（codex、pi……）干活，一个 window 一个——不管是把一件事交给其中一个、把一件事拆给几个、让两个各做一遍同一道题作对照，还是让几个从不同角度审同一份东西。当用户说「让 codex 去做这个」「让 codex 和 pi 一起做」「起个 agent 跑一下」「让 pi 也做一遍看看」「起几个 agent 分头审」「多角度并行 review」「一个车道一个模型」「开几个窗口跑」时触发。本 skill 管的是：怎么把 window 起得能看见对方在想什么、每个 window 的工具、模型和思考等级 (开头问一次)、活怎么拆才不打架、写代码的 agent 怎么隔离才不互相毁、结果怎么收怎么验、跑完怎么收摊（问一句再关，别让 window 越堆越多）。每个 window 的任务书怎么写、怎么送，是 `tmux-dispatch` 的事。
+argument-hint: "[<要干的活>] [<交给谁: codex|pi|<工具>:<模型>:<思考等级>>]"
 disable-model-invocation: false
 ---
 
@@ -44,19 +44,47 @@ pi -p "$(cat brief.md)" 2>&1 | tee out.log
 
 启动命令里的 `cd` 决定了这个 agent 的工作目录——**要写代码的 agent，隔离就是在这一步定下来的**，见下面那节。
 
-## 模型: 启动起来是什么就用什么
+## 模型: 每个 window 一个选择, 开头问一次
 
-`codex` 和 `pi` 直接裸启动, 不带任何模型或思考等级参数: 每个 window 用的是那个工具自己配置的默认模型
-(`~/.codex/config.toml`、pi 自己的设置)。选模型是用户在那些配置里做的事, 不在本 skill 里写死, 所以不要加
-`-m`、`--model`、`--provider`、`--thinking` 或 `-c model_reasoning_effort=...`, 除非用户在当次对话里点名要
-某个模型。点名时照抄用户给的完整 id; 简称不是真实的模型 id, window 会一启动就退出, 只剩一个看起来像在
-思考的 shell 提示符。
+每个 window 跑一个**选择** (pick): `<工具>:<模型>:<思考等级>`, 例如 `codex:gpt-6-astra:high`、
+`pi:xai/grok-4.6:xhigh`。只写 `<工具>` 表示用那个工具自己配置的缺省 (`~/.codex/config.toml`、pi 的设置)。
+模型经常变, 所以本 skill 不写任何模型名: 同目录的 `scripts/crew-models.py` 现查每个工具此刻能跑什么。
 
-启动后看一眼 window: 两个工具都会在底栏打印实际启动的模型。汇报时把这个模型名说出来, 让人知道到底是谁审的、谁写的。
+```sh
+S=<本 skill 的绝对路径>/scripts/crew-models.py
+$S catalog                   # 菜单: 各工具的缺省, 每个模型及它接受的思考等级
+$S check <pick>...           # 这些选择现在能不能用? 有不能用的退出码 1
+$S assign <n> <pick>...      # n 个 window 各分一个: 不能用的剔掉, 其余轮流
+$S launch <pick>             # 在 window 里 exec 的命令
+```
 
-对照和审查形态里, 不同 window 最好是不同的模型: 同一个盲点问两遍, 不比问一遍多得到什么。一个 window
-用 codex、另一个用 pi, 本身就是两个模型; 同一个工具开两个 window 就是同一个模型两遍, 所以要混用工具,
-而不是加参数。拆分形态无所谓。
+**选择从哪来: 开头问一次。**
+
+- 调用方手里已经有, 就直接用, 不问: sdd 的 CR 阵容文件 (工作目录下的 `.reviewers`), 或用户在当次
+  对话里点名的 ("A 用 codex astra high")。
+- 否则在起第一个 window 之前问一次: 跑 `catalog`, 给一个推荐阵容 (对照 / 审查形态用不同模型), 外加
+  "各用工具缺省" 一项。这个答案管到这件活结束, 包括复核和后续轮次, 不再问。
+
+**通过脚本启动**, 不要手拼参数。`launch` 遇到不能用的选择直接拒绝, 而不是起一个当场退出、只剩空
+shell 看起来像在思考的 window:
+
+```sh
+$S assign 3 codex:gpt-6-astra:high pi:xai/grok-4.6:xhigh     # 输出 "1 <pick>", "2 <pick>", ...
+tmux new-window -d -t agents -n <name> "cd <绝对路径> && exec $($S launch <pick>)"
+```
+
+启动后 `capture-pane` 看一次底栏: pi 显示 `(<provider>) <model> • <effort>`, codex 显示
+`<Model> <effort> · ... weekly N% left`。和选择对不上就关掉替补。汇报时写明每个 window 的选择, 让人
+知道到底是谁审的、谁写的。
+
+**自动替补, 不问。** `assign` 剔掉的选择 (模型没了、不支持这个思考等级、工具不在), 或启动后因额度
+死掉的 window (几秒就结束且没有产出, 或 codex 显示 `weekly 0% left`), 换成阵容里下一个能用的; 一个都
+不剩就用工具缺省。阵容的来源不改, 替补写进汇报: 哪个 window、哪个选择、为什么。下次启动会重新检查,
+额度恢复了就自动用回来。
+
+对照和审查形态里, 相邻 window 要用不同的模型: 同一个盲点问两遍, 不比问一遍多得到什么。按模型算,
+不按工具算: 两个 pi window 分别跑 grok 和 glm 是两个模型; 两个 window 同一个选择就是同一个模型两遍。
+拆分形态无所谓。
 
 ## 给每个 window 发任务书
 

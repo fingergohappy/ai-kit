@@ -1,8 +1,8 @@
 ---
 name: agent-crew
 description: |
-  Put outside CLI agents (codex, pi, ...) to work in a dedicated `agents` tmux session, one window each — whether that is handing one of them a job, splitting a job across several, having two solve the same problem independently, or having several review one artifact from different angles. Use whenever the user says "让 codex 去做这个", "让 codex 和 pi 一起做", "起个 agent 跑一下", "让 pi 也做一遍看看", "起几个 agent 分头审", "多角度并行 review", "一个车道一个模型", "开几个窗口跑", "fan this out", "have codex do it", "run these in parallel". Covers launching the windows so their thinking stays visible (each tool on its own default model), how work is split so the results compose, how writing agents are isolated so they don't destroy each other's work, and how the results are collected and checked, and how camp is broken afterwards (ask before closing, so windows don't pile up). Writing and delivering each window's brief is `tmux-dispatch`'s job.
-argument-hint: "[<the work>] [<who: codex|pi|...>]"
+  Put outside CLI agents (codex, pi, ...) to work in a dedicated `agents` tmux session, one window each — whether that is handing one of them a job, splitting a job across several, having two solve the same problem independently, or having several review one artifact from different angles. Use whenever the user says "让 codex 去做这个", "让 codex 和 pi 一起做", "起个 agent 跑一下", "让 pi 也做一遍看看", "起几个 agent 分头审", "多角度并行 review", "一个车道一个模型", "开几个窗口跑", "fan this out", "have codex do it", "run these in parallel". Covers launching the windows so their thinking stays visible (each window on a tool, model and effort chosen once up front), how work is split so the results compose, how writing agents are isolated so they don't destroy each other's work, and how the results are collected and checked, and how camp is broken afterwards (ask before closing, so windows don't pile up). Writing and delivering each window's brief is `tmux-dispatch`'s job.
+argument-hint: "[<the work>] [<who: codex|pi|<tool>:<model>:<effort>>]"
 disable-model-invocation: false
 ---
 
@@ -44,22 +44,51 @@ pi -p "$(cat brief.md)" 2>&1 | tee out.log
 
 The `cd` in the launch command sets that agent's working directory — for writing agents, see the isolation section below, because this is where the isolation is decided.
 
-## Models: whatever the tool starts with
+## Models: one pick per window, asked once
 
-Launch `codex` and `pi` bare, with no model or reasoning flags: each window runs whatever model and
-reasoning level that tool is configured to start with (`~/.codex/config.toml`, pi's own settings).
-The user picks models in those configs, not in this skill, so don't add `-m`, `--model`,
-`--provider`, `--thinking` or `-c model_reasoning_effort=...` unless the user asks for a specific
-model in that conversation. If they do, use the exact id they give; a nickname that isn't a real
-model id makes the window exit at once and leaves a bare shell prompt that looks like thinking.
+Each window runs a **pick**: `<tool>:<model>:<effort>`, e.g. `codex:gpt-6-astra:high` or
+`pi:xai/grok-4.6:xhigh`. A bare `<tool>` means that tool's own configured default (`~/.codex/config.toml`,
+pi's settings). Models change often, so this skill names none: `scripts/crew-models.py` (next to this
+file) reads what each tool can run right now.
 
-After launching, glance at the window once: both tools print the model they started with in their
-footer. Name that model in your report, so it's clear what actually reviewed or wrote.
+```sh
+S=<absolute path of this skill>/scripts/crew-models.py
+$S catalog                   # menu: each tool's default, every model and the efforts it accepts
+$S check <pick>...           # is each pick usable now? exit 1 if not
+$S assign <n> <pick>...      # n windows -> one pick each: unusable picks dropped, the rest rotated
+$S launch <pick>             # the command to exec in the window
+```
 
-For **duplicate** and **review**, different windows should be different models where that's cheap,
-because two models with the same blind spot buy nothing over one. Using codex for one window and pi
-for the other already gives two different models; two windows of the same tool give the same model
-twice, so mix tools rather than adding flags. For **split**, it doesn't matter.
+**Where the picks come from: ask once, at the start.**
+
+- If the caller already holds them, use them and don't ask: an sdd CR's lineup file (`.reviewers` in
+  its work directory), or picks the user named in this conversation ("A 用 codex astra high").
+- Otherwise ask once, before the first window: run `catalog`, offer a recommended lineup (different
+  models for duplicate / review) plus "each tool's default". That answer covers the rest of the job,
+  rechecks and later rounds included. Don't ask again.
+
+**Launch through the script**, never by hand-building flags. `launch` refuses an unusable pick
+instead of starting a window that exits at once and leaves a bare shell that looks like thinking:
+
+```sh
+$S assign 3 codex:gpt-6-astra:high pi:xai/grok-4.6:xhigh     # prints "1 <pick>", "2 <pick>", ...
+tmux new-window -d -t agents -n <name> "cd <absolute path> && exec $($S launch <pick>)"
+```
+
+After launching, `capture-pane` once and read the footer: pi shows `(<provider>) <model> • <effort>`,
+codex shows `<Model> <effort> · ... weekly N% left`. If it doesn't match the pick, kill it and substitute.
+Name each window's pick in your report, so it's clear what actually reviewed or wrote.
+
+**Substitute automatically, don't ask.** A pick that `assign` drops (model gone, effort not supported,
+tool missing), or a window that dies of quota after launch (it finishes within seconds with no output,
+or codex shows `weekly 0% left`), is replaced by the next usable pick in the lineup; when none is left,
+by the tool's default. Leave the lineup's source as it is and record the swap in the report: which
+window, which pick, why. The next launch checks again, so a recovered quota is used again.
+
+For **duplicate** and **review**, neighbouring windows should run different models, because two
+models with the same blind spot buy nothing over one. Judge by model, not by tool: two pi windows on
+grok and glm are two models; two windows on the same pick are one model twice. For **split**, it
+doesn't matter.
 
 ## Hand each window its brief
 
