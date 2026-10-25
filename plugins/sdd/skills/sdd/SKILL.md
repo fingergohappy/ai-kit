@@ -56,6 +56,9 @@ spec §4 表里填没填提交 hash), 不是 agent 自述. 所以换个会话接
   `release/runbook/<环境>/<批次>/runbook.md` (手册, 干净可复用); 实际做了什么、输出、遇到的问题按时间
   追加进同目录 `log.md`. 执行要用的 SQL / 脚本 / 辅助库**复制**进同目录 `sql/` `scripts/` (头部写来源),
   不引用目录外的文件. 上线产物里各环境那一行只指过去, 不复述. 见 conventions "上线手册: release/runbook/".
+- **留给运营处理的单独放 `release/<批次>/ops/`**. 要运营 / 供应商商务 / 产品合规提供、确认、拍板或长期负责的
+  清单 (一个主题一份, README 索引带状态), 不混进 CR 上线文件与环境手册; 手册里等运营的步骤只指过去.
+  见 conventions "留给运营处理的".
 - **上线密钥只写进 `_secret/`**. 值只放 `docs/sdd/_secret/CR-NNN-<slug>.env` (由 `docs/sdd/.gitignore`
   排除, `sdd.py init` 补), release 文件 / seed SQL / spec / review 只写变量名和 "值见 `_secret/...`";
   从生产读回来的值也一样. 兼作标识的 key (如 Fireblocks API user 的 UUID) 也算密钥.
