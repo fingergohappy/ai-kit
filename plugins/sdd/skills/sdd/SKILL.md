@@ -1,17 +1,17 @@
 ---
 name: sdd
 description: >-
-  需求 (REQ) / 变更 (CR) / 实施 spec / review 工作流的共享底座与状态入口. 当用户问 "到哪一步了", "下一步做什么", "检查一下文档一致性 / 索引", "这个 CR 什么状态", 或提到 REQ-NNN / CR-NNN / docs/sdd 时使用; /draft /req /create-cr /implement-cr /review-cr /auto-cr 六个命令的模板, 脚本与约定都在这里, 那六个命令运行前也要读本文的约定部分.
+  需求 (REQ) / 变更 (CR) / 实施 spec / review 工作流的共享底座与状态入口. 当用户问 "到哪一步了", "下一步做什么", "检查一下文档一致性 / 索引", "这个 CR 什么状态", 或提到 REQ-NNN / CR-NNN / docs/sdd 时使用; /draft /req /create-cr /spec /implement-cr /review-cr /auto-cr /runbook 这些命令的模板, 脚本与约定都在这里, 它们运行前也要读本文的约定部分.
 ---
 
 # sdd: 需求 / 变更 / 实施 / review 的底座
 
-六个命令共用这里的三样东西:
+各命令共用这里的三样东西:
 
 | 东西 | 位置 (相对本文件) | 用途 |
 |---|---|---|
 | 脚本 | `scripts/sdd.py` | 编号, 建文件, 状态与下一步, 校验, 索引 -- 确定性的活不让 AI 手做 |
-| 模板 | `assets/templates/*.md` | REQ / CR (变更 `cr.md`, 立项 `cr-new.md`) / spec / review / draft / lessons, 注释里写着每节怎么写 |
+| 模板 | `assets/templates/*` | REQ / CR (变更 `cr.md`, 立项 `cr-new.md`) / spec / review / draft / lessons / seed SQL / 上线手册 (`runbook.md`, `log.md`), 注释里写着每节怎么写 |
 | 参考 | `references/` | `conventions.md` **全部约定 (唯一来源, 项目里不放副本)**; `writing-guide.md` 怎么写条目; `review-lanes.md` 三次 review 各查什么; `tdd.md` 实施循环; `openspec-borrowings.md` 借鉴与取舍 |
 
 ## 直接调用 (`/sdd`)
@@ -33,7 +33,7 @@ spec §4 表里填没填提交 hash), 不是 agent 自述. 所以换个会话接
 跑一次 `status CR-NNN` 就够 -- 不要凭上下文里的记忆判断做到哪了, 那是唯一会骗人的来源.
 这与 "落点填提交 hash 不填勾" 是同一条约定: 进度表本身也不许有勾.
 
-## 约定 (六个命令共同遵守)
+## 约定 (各命令共同遵守)
 
 完整版在 `references/conventions.md`. 最容易违反的几条:
 
@@ -45,8 +45,17 @@ spec §4 表里填没填提交 hash), 不是 agent 自述. 所以换个会话接
 - **CR 必须挂在具体条目上**. 变更 CR 的影响需求精确到 FR-x / BR-y / AC-z, 新增 FR 必带新增 AC;
   全新业务用立项 CR (`new-cr --new`), 挂在新建的 draft REQ 上, 交付范围通常是全文.
 - **手工 SQL 先判归宿**. 代码依赖的参考数据进迁移, 环境相关的配置进项目里入库的 seed 脚本,
-  开发夹具进 fixture; 只有 "跑完即弃" 的一次性回填 / 修复才放 `release/CR-NNN-<slug>.seed.sql`
+  开发夹具进 fixture; 只有 "跑完即弃" 的一次性回填 / 修复才放 `release/<批次>/CR-NNN-<slug>.seed.sql`
   (`sdd.py new-seed`) -- 与上线产物并排, 跑它的人和读发布说明的是同一个人. 判定写进 spec §3.
+- **上线文件按批次放**. CR frontmatter 的 `release: <批次>` (例 `sprint7`) 决定上线产物与手工 SQL 建在
+  `release/<批次>/` 下; 一个 CR 只属于一个批次, 要跨批就拆 CR. 第一次要建上线文件 (写 spec, new-seed,
+  实施时记上线事实) 而 CR 没有这个字段时, **停下来问用户放哪一批**: PR 开到 testing (或项目默认集成分支)
+  建议当前批次, 开到 `sprintN` 分支建议那一批; 定了写进 CR, 以后不再问. 字段缺失时 `new-spec` /
+  `new-seed` 拒绝, 不落顶层; `validate` 对 "有 release 文件却没字段" 与 "文件不在字段那一批的目录下" 报警告.
+- **在环境上做的事走 `/runbook`**. 某个环境 (测试环境、沙箱、生产) 这一批要做什么、按什么顺序, 写在
+  `release/runbook/<环境>/<批次>/runbook.md` (手册, 干净可复用); 实际做了什么、输出、遇到的问题按时间
+  追加进同目录 `log.md`. 执行要用的 SQL / 脚本 / 辅助库**复制**进同目录 `sql/` `scripts/` (头部写来源),
+  不引用目录外的文件. 上线产物里各环境那一行只指过去, 不复述. 见 conventions "上线手册: release/runbook/".
 - **上线密钥只写进 `_secret/`**. 值只放 `docs/sdd/_secret/CR-NNN-<slug>.env` (由 `docs/sdd/.gitignore`
   排除, `sdd.py init` 补), release 文件 / seed SQL / spec / review 只写变量名和 "值见 `_secret/...`";
   从生产读回来的值也一样. 兼作标识的 key (如 Fireblocks API user 的 UUID) 也算密钥.
@@ -79,7 +88,11 @@ review: to fix -> fixing -> fixed
 三次 review 派给 tmux 里的 codex / pi 并行审, 业务歧义先按推荐做法执行并记成 REQ 第 10 节的 OQ,
 到落实那步停下等用户确认 OQ.
 
-只有 `/implement-cr` 会改项目代码 (`/auto-cr` 内含它, 所以也会), 其余都只读代码 (写文档不算).
+上线时按环境走 `/runbook`: `pre <环境> <批次>` 读 `release/<批次>/` 全部上线文件写手册, 给用户过目;
+`run <环境> <批次>` 从第一个未完成步骤逐步执行, 写操作先问, 每步记 log; `auto` 先 pre 再 run.
+
+只有 `/implement-cr` 会改项目代码 (`/auto-cr` 内含它, 所以也会), 其余都只读代码 (写文档不算);
+`/runbook run` 不改代码, 但会在环境上执行写操作, 每一步先问.
 
 全新业务与改已有业务走同一条链, 只有 `/create-cr` 那一步分形态 (立项 CR / 变更 CR).
 
@@ -87,7 +100,7 @@ review: to fix -> fixing -> fixed
 
 ## 跨工具
 
-本 skill 与六个命令只用 SKILL.md 的 `name` / `description` 两个字段, 不依赖任何工具专属
+本 skill 与各命令只用 SKILL.md 的 `name` / `description` 两个字段, 不依赖任何工具专属
 变量; 作为 ai-kit 插件时 Claude Code 里是 `/sdd:sdd` `/sdd:draft` 等, 软链接安装时无前缀 (`/sdd`), Codex 里是 `$sdd`, pi 按其 skill 调用方式. 命令后面的
 参数 (如 `CR-005`, `docs`) 从用户消息里取; 没给就按各命令 SKILL.md 里的规则推断或询问.
-安装: `/plugin install sdd@ai-kit`; 或 `install.sh` 把八个目录链接进 `.claude/skills/`, `.agents/skills/`, `.pi/skills/`.
+安装: `/plugin install sdd@ai-kit`; 或 `install.sh` 把九个目录链接进 `.claude/skills/`, `.agents/skills/`, `.pi/skills/`.

@@ -3,6 +3,8 @@ id: {{ID}}
 kind: change                       # change = 改已有 REQ 的行为 (本模板); charter = 全新业务立项 (cr-new.md)
 status: to fix                     # to fix | fixing | fixed | rejected
 created: {{DATE}}
+release:                           # 上线批次 (例 sprint7), 一个 CR 只属于一批, 要跨批就拆 CR. 现在留空;
+                                   # 第一次建上线文件 (/spec, new-seed) 时问用户: PR 开到 testing 建议当前批次, 开到 sprintN 建议那一批
 affects:                           # 每项 "REQ-NNN (条目号...)", 至少一个; 跨多个 REQ 就多写几项
   - REQ-NNN (FR-x, BR-y, AC-z)
 summary: >-

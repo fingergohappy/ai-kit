@@ -9,7 +9,7 @@
 set -euo pipefail
 
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-SKILLS=(sdd draft req create-cr spec implement-cr review-cr auto-cr)
+SKILLS=(sdd draft req create-cr spec implement-cr review-cr auto-cr runbook)
 MODE=link
 ROOT="$PWD"
 for a in "$@"; do

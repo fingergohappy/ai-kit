@@ -39,6 +39,9 @@ CR 是一次带来 REQ 变化的工作单元: spec 与三次 review 都挂在它
    与代码一致 (车道 A 核) -- REQ 与代码不一致的, 先在 CR 动机里说明, 不要以其中一方为准悄悄写.
 5. **建文件**: 变更形态 `sdd.py new-cr <slug> "<标题>"`; 新增形态 `sdd.py new-cr <slug> "<标题>" --new`.
    脚本分配编号, 按形态选模板, 把 `draft/<slug>/` 整个升格成工作目录 `work/CR-NNN-<slug>/`.
+   frontmatter 的 `release:` (上线批次): 用户已经说了这个 CR 上哪一批 (或 PR 开到哪个分支) 就填上;
+   没说就留空, 这里不追问 -- 第一次建上线文件时 (`/spec`, `new-seed`) 没有 release 字段先问用户.
+   一个 CR 只属于一个批次; 用户要一部分先上一部分后上, 就拆成两个 CR. 规则见 conventions "上线批次".
 6a. **变更形态按模板写** (`../sdd/assets/templates/cr.md`):
    - 影响需求精确到条目号, 用链接 `[REQ-006](../req/REQ-006-xxx.md) (FR-8, AC-8)`.
    - 变更内容: 一行一个条目, "现行 -> 变更后"; 新增标 "(新增)" 且新增 FR 必带新增 AC;

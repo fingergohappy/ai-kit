@@ -46,7 +46,7 @@ updated: {{DATE}}
      回填与否, 能否先行独立合并, 配套守卫 (lock / DBML / 迁移测试). 无迁移写 "无".
      有要人手跑的 SQL 时**在这里判归宿**并写明路径: 代码依赖的参考数据 -> 迁移 (与建表同批);
      环境相关的配置 -> 项目里入库的幂等 seed 脚本 (没有就在 §2 新建); 开发夹具 -> fixture;
-     跑完即弃的一次性回填 -> release/CR-NNN-<slug>.seed.sql (sdd.py new-seed). 判据见 conventions
+     跑完即弃的一次性回填 -> release/<批次>/CR-NNN-<slug>.seed.sql (sdd.py new-seed). 判据见 conventions
      "手工 SQL: 先判归宿, 再决定放哪" -- 新环境还要用的别放那儿, 那是迁移或项目 seed 脚本的活. -->
 
 ## 4. 分步实施顺序 (每步独立可合并, 可回退)

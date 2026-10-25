@@ -27,7 +27,10 @@ spec 回答 "改哪里, 按什么顺序改, 怎么测, 怎么上线". 它不重�
    比等到 impl review 被抓出来便宜.
 
 3. **建文件**: `sdd.py new-spec CR-NNN`. 基点 commit 由脚本填进 frontmatter 的 `base`,
-   §1 的所有 file:line 都相对它成立.
+   §1 的所有 file:line 都相对它成立. 它同时把上线产物建到 `release/<批次>/CR-NNN-<slug>.md`,
+   批次取 CR frontmatter 的 `release:`. **CR 没有 release 字段先问用户放哪一批** (脚本会拒绝, 不落顶层):
+   PR 开到 testing (或项目默认集成分支) 建议当前批次, 开到 `sprintN` 分支建议那一批, 用户可填别的;
+   定了写进 CR frontmatter 再跑, 以后不再问. 一个 CR 只属于一个批次.
 
 4. **§1 代码侦察结论 -- 先写完这一节, 再写别的**. 每条三段式:
 
@@ -55,7 +58,7 @@ spec 回答 "改哪里, 按什么顺序改, 怎么测, 怎么上线". 它不重�
      **有要人手跑的 SQL (seed / 回填 / 修复) 时, 这一节必须判归宿并写明落到哪个路径**:
      代码依赖的参考数据 -> 迁移目录 (与建表同批, `ON CONFLICT DO NOTHING`); 环境相关的配置 ->
      项目里入库的幂等 seed 脚本 (没有这个目录就在 §2 里新建一个); 开发夹具 -> fixture;
-     只有跑完即弃的一次性回填才落 `release/CR-NNN-<slug>.seed.sql` (`sdd.py new-seed CR-NNN`).
+     只有跑完即弃的一次性回填才落 `release/<批次>/CR-NNN-<slug>.seed.sql` (`sdd.py new-seed CR-NNN`).
      四类判据见 `../sdd/references/conventions.md` "手工 SQL: 先判归宿, 再决定放哪" --
      work/ 会在提炼后删掉, 把新环境还要用的 SQL 放进去是最常见的那个错.
    - **§4 分步**: 每步的约束是 **合并后系统仍然正确** -- 迁移先行且零行为变化, 开关默认关时全路径

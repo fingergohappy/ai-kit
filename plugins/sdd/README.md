@@ -1,6 +1,6 @@
 # sdd skills: 需求 / 变更 / 实施 / review 工作流
 
-八个 skill, 一个底座 (`sdd`) 加七个命令. 只有 `implement-cr` 与含它的 `auto-cr` 会改项目代码, 其余都只读代码. 只用 SKILL.md 的 `name` / `description`, 脚本只依赖
+九个 skill, 一个底座 (`sdd`) 加八个命令. 只有 `implement-cr` 与含它的 `auto-cr` 会改项目代码, 其余都只读代码. 只用 SKILL.md 的 `name` / `description`, 脚本只依赖
 Python 3 标准库, Claude Code / Codex / pi 都能用.
 
 | skill | 做什么 | 产出 | 改代码? |
@@ -13,6 +13,7 @@ Python 3 标准库, Claude Code / Codex / pi 都能用.
 | `implement-cr` | 做下一件事: 处理发现 / TDD 分步实施 / 落实 REQ | 提交, REQ 更新 | **是** |
 | `review-cr` | 三次 review: docs / spec / impl, 及复核; `distill` 模式把教训提炼进错题本并清理工作目录 | `reviews/0N-<stage>.md`, `lessons.md` | 否 |
 | `auto-cr` | 无人值守推进一个已立的 CR 到落实前: review 派给 tmux 里的 codex / pi 并行审, 业务歧义记成 OQ 往下走 | 提交, reviews, REQ 第 10 节的 OQ | **是** |
+| `runbook` | 按环境、按批次写上线手册并执行: `pre` 收集上线文件写手册, `run` 逐步执行并记录, `auto` 先 pre 再 run | `release/runbook/<环境>/<批次>/{runbook.md, log.md, sql/, scripts/}` | 否 (会动环境, 写操作先问) |
 
 ## 安装
 
@@ -23,7 +24,7 @@ Python 3 标准库, Claude Code / Codex / pi 都能用.
 /plugin install sdd@ai-kit
 ```
 
-装好后命令带插件前缀: `/sdd:sdd` `/sdd:draft` `/sdd:req` `/sdd:create-cr` `/sdd:implement-cr` `/sdd:review-cr` `/sdd:auto-cr`
+装好后命令带插件前缀: `/sdd:sdd` `/sdd:draft` `/sdd:req` `/sdd:create-cr` `/sdd:implement-cr` `/sdd:review-cr` `/sdd:auto-cr` `/sdd:runbook`
 (Codex 为 `$sdd` 等). 参数写在命令后面 (`/sdd:review-cr CR-005 docs`).
 
 pi 或不走插件系统的工具: 用软链接装进项目:
@@ -45,6 +46,7 @@ id: CR-004
 kind: change          # change 变更 | charter 全新业务立项
 status: fixed         # to fix | fixing | fixed | rejected
 created: 2026-08-27
+release: sprint7      # 上线批次; 第一次建上线文件时问用户, 上线文件建在 release/<批次>/
 affects:
   - REQ-006 (FR-8, BR-19, AC-8)
 summary: >-
@@ -67,9 +69,11 @@ docs/sdd/
 └── work/CR-NNN-<slug>/          一个变更一个文件夹 (入库)
     {<日期>-<主题>.md, spec.md, reviews/01-docs.md 02-spec.md 03-impl.md}
                                   CR fixed 并提炼后整个删除 (sdd.py prune)
-  release/CR-NNN-<slug>.md        上线产物: PR 模板的副本, 中文填, 开 PR 时翻成英文贴进正文
-  release/CR-NNN-<slug>.seed*.sql 要人手跑且跑完即弃的 SQL
-                                  两样都与 cr/ 同级, prune 不管 -- 它们要活到上线真做完
+  release/<批次>/CR-NNN-<slug>.md        上线产物: PR 模板的副本, 中文填, 开 PR 时翻成英文贴进正文
+  release/<批次>/CR-NNN-<slug>.seed*.sql 要人手跑且跑完即弃的 SQL
+                                  两样都与 cr/ 同级, prune 不管 -- 它们要活到上线真做完;
+                                  批次取 CR 的 release 字段, 没填 new-spec / new-seed 拒绝
+  release/runbook/<环境>/<批次>/  /runbook 的上线手册 runbook.md + 执行记录 log.md + sql/ scripts/ (自包含的副本)
 ```
 
 ## 流程
@@ -78,6 +82,8 @@ docs/sdd/
 /draft -> /req -> /create-cr -> /review-cr docs -> /spec -> /review-cr spec
        -> /implement-cr (TDD 实施, 整段一个提交) -> /review-cr impl -> /implement-cr (落实, CR fixed)
        -> /review-cr distill (提炼教训进 lessons.md, 清理工作目录)
+
+上线: /runbook pre <环境> <批次> (写手册) -> /runbook run <环境> <批次> (逐步执行, 记 log)
 ```
 
 `sdd.py status CR-NNN` 出八关进度表 (走到哪 / 卡在哪 / 还剩什么) 加下一步命令, 每关的判据是
@@ -93,7 +99,7 @@ plugins/sdd/
 ├── skills/sdd/
 │   ├── SKILL.md
 │   ├── scripts/sdd.py                 init / status / new-* / validate / index / lessons / prune
-│   ├── assets/templates/              req cr cr-new spec review draft lessons (注释 = 写法)
+│   ├── assets/templates/              req cr cr-new spec review draft lessons seed runbook log (注释 = 写法)
 │   └── references/                    conventions (唯一约定来源) writing-guide review-lanes tdd openspec-borrowings
 ├── skills/draft/SKILL.md
 ├── skills/req/SKILL.md
@@ -101,7 +107,8 @@ plugins/sdd/
 ├── skills/spec/SKILL.md
 ├── skills/implement-cr/SKILL.md
 ├── skills/review-cr/SKILL.md
-└── skills/auto-cr/SKILL.md     无人值守编排 (tmux-dispatch + agent-crew)
+├── skills/auto-cr/SKILL.md     无人值守编排 (tmux-dispatch + agent-crew)
+└── skills/runbook/SKILL.md     按环境、按批次的上线手册与执行记录
                              (每个 skill 另有 agents/openai.yaml)
 ```
 

@@ -6,7 +6,7 @@
 文档根默认 docs/sdd (从当前目录向上查找), 可用 --root 或环境变量 SDD_ROOT 覆盖.
 
 子命令:
-  init                    建目录 + INDEX + 把 _secret/ 加进 .gitignore (约定只在 skill 里, 不放 README);
+  init                    建目录 (含 release/runbook/) + INDEX + 把 _secret/ 加进 .gitignore (约定只在 skill 里, 不放 README);
                           docs/sdd 自己是 git 仓库时再装 pre-commit hook 跑 secret-scan --staged
   secret-scan [--staged]  拿 _secret/ 里 (及 _secret/sources 列出的本机文件) 的密钥真值逐字比对
                           跟踪的文件; --staged 只扫暂存区新增的行并加跑 gitleaks. 命中退出 1, 不回显值
@@ -17,11 +17,16 @@
   new-cr <slug> [标题] [--new]   从模板建 CR (--new: 新增业务的立项 CR; 不带则是变更 CR).
                           同时把草稿目录 draft/<slug> 移成工作目录 work/CR-NNN-<slug>
   new-draft <slug|CR-NNN> <topic>   建草稿文件
-  new-spec <CR-NNN>       从模板建实施 spec
-  new-seed <CR-NNN> [名字]  从模板建要人手跑的 SQL, 放 release/CR-NNN-<slug>.seed[-<名字>].sql.
-                          只装 "跑完即弃" 的那类; 参考数据与环境配置的归宿在项目仓库里
+  new-spec <CR-NNN>       从模板建实施 spec, 并建上线产物 release/<批次>/CR-NNN-<slug>.md.
+                          批次取 CR frontmatter 的 `release:`; 没填就拒绝 (先问用户放哪一批)
+  new-seed <CR-NNN> [名字]  从模板建要人手跑的 SQL, 放 release/<批次>/CR-NNN-<slug>.seed[-<名字>].sql.
+                          只装 "跑完即弃" 的那类; 参考数据与环境配置的归宿在项目仓库里.
+                          批次规则同 new-spec
   new-review <CR-NNN> docs|spec|impl   从模板建 review
-  validate                一致性检查 (退出码: 有 error 时 1)
+  new-runbook <环境> <批次>  建上线手册目录 release/runbook/<环境>/<批次>/{runbook.md, log.md, sql/, scripts/}
+                          (/runbook 用; 已有的文件不动), 并列出 release/<批次>/ 下的上线文件
+  validate                一致性检查 (退出码: 有 error 时 1). 含上线批次: 有 release 文件却没填
+                          `release:`, 或文件不在 release/<批次>/ 下 (含旧的顶层位置), 报警告
   index                   重新生成 INDEX.md
   lessons [--init] [--next-id]   错题本 docs/sdd/lessons.md: 摘要 / 建文件 / 下一个 L 编号
   prune <CR-NNN> [--dry-run] [--keep draft|spec|reviews]
@@ -346,8 +351,12 @@ def parse_cr(path):
     for entry in as_list(m.get("affects")):
         for mm in re.finditer(r"(REQ-\d{3,})(?:\]\([^)]*\))?\s*(?:\(([^)]*)\))?", str(entry)):
             affects.setdefault(mm.group(1), set()).update(ITEM_REF_RE.findall(mm.group(2) or ""))
+    batch = m.get("release")
+    # `release:` 留空时解析器给的是空列表; 没填与留空一样算未定
+    batch = str(batch).strip() if batch not in (None, False, "", []) and not isinstance(batch, list) else ""
     return {"text": t, "status": m.get("status"), "id": m.get("id"), "kind": m.get("kind") or "change",
-            "title": h1(t), "summary": m.get("summary") or "", "affects": affects, "legacy": legacy}
+            "title": h1(t), "summary": m.get("summary") or "", "affects": affects, "legacy": legacy,
+            "release": batch}
 
 
 FINDING_ROW_RE = re.compile(r"^\|\s*([DSI]-\d+)\s*\|(.*)$", re.M)
@@ -636,7 +645,7 @@ def ensure_secret_hook(base):
 
 def cmd_init(args):
     base = os.path.abspath(args.root or os.path.join(os.getcwd(), "docs", "sdd"))
-    for sub in ("req", "cr", "draft", "work", "release"):
+    for sub in ("req", "cr", "draft", "work", "release", os.path.join("release", "runbook")):
         os.makedirs(os.path.join(base, sub), exist_ok=True)
     ensure_secret_ignored(base)
     ensure_secret_hook(base)
@@ -765,26 +774,93 @@ def find_pr_template(repo_root):
     return None
 
 
-def release_path(root, cr):
-    """上线产物住 docs/sdd/release/, 不住 CR 的工作目录.
+# ---------- 上线批次 ----------
+
+# release/ 下不是批次的子目录: runbook/ 是逐环境的上线手册与记录 (/runbook), step-by-step/ 是它的旧名
+RELEASE_RESERVED = ("runbook", "step-by-step")
+BATCH_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]*$")
+
+
+def bad_batch(batch):
+    """批次名不能当目录名用时返回原因, 能用返回 None."""
+    if not BATCH_RE.match(batch):
+        return "批次名只能是字母数字与 . _ - (例 sprint7, v1.5.0), 得到 %r" % batch
+    if batch in RELEASE_RESERVED:
+        return "%r 是 release/ 下的保留目录, 不能当批次名" % batch
+    return None
+
+
+def need_batch(root, cr, doing):
+    """上线文件要建在 release/<批次>/ 下; CR 没填 `release:` 就拒绝, 不落到顶层.
+
+    批次由人定 (PR 开到哪个分支), 脚本猜不了: 落到顶层的文件发布时会被漏掉 -- 读发布清单的人
+    只看那一批的目录.
+    """
+    batch = parse_cr(cr["path"])["release"]
+    if not batch:
+        die("%s 还没定上线批次, 不%s.\n"
+            "  先问用户这个 CR 放哪一批: PR 开到 testing (或项目默认集成分支) 建议当前批次, 开到 sprintN\n"
+            "  分支建议那一批. 定了写进 %s 的 frontmatter `release: <批次>` (例 release: sprint7) 再跑.\n"
+            "  一个 CR 只属于一个批次; 要拆就拆成两个 CR."
+            % (cr["id"], doing, os.path.relpath(cr["path"], root)))
+    why = bad_batch(batch)
+    if why:
+        die("%s: frontmatter `release`: %s" % (cr["id"], why))
+    return batch
+
+
+def release_batches(root):
+    """release/ 下的批次目录名, 排序."""
+    d = os.path.join(root, "release")
+    if not os.path.isdir(d):
+        return []
+    return sorted(fn for fn in os.listdir(d) if os.path.isdir(os.path.join(d, fn))
+                  and fn not in RELEASE_RESERVED and not fn.startswith("."))
+
+
+def release_files(root, cr_id):
+    """这个 CR 在 release/ 下的全部文件: [(批次, 相对 sdd 根的路径)]; 批次 "" 是旧的顶层位置 (只读兼容).
+
+    认文件名前缀 `CR-NNN-` 或 `CR-NNN.` -- 核查 SQL 常写成 CR-066.go-live-checks.sql.
+    """
+    d = os.path.join(root, "release")
+    out = []
+    for batch in [""] + release_batches(root):
+        bd = os.path.join(d, batch)
+        if not os.path.isdir(bd):
+            continue
+        for fn in sorted(os.listdir(bd)):
+            if fn.startswith((cr_id + "-", cr_id + ".")) and os.path.isfile(os.path.join(bd, fn)):
+                out.append((batch, os.path.relpath(os.path.join(bd, fn), root)))
+    return out
+
+
+def release_path(root, cr, batch):
+    """上线产物住 docs/sdd/release/<批次>/, 不住 CR 的工作目录.
 
     工作目录在提炼之后整个删掉, 而上线事实要活到上线做完 -- 十六项发布核查、迁移的
     上一版兼容判断、跑过的命令与输出, 这些在 PR 合并之后仍然是唯一一份记录. 放在
     work/ 下就只能靠 prune 的 --keep 记得留它, 记不住就跟着草稿一起没了.
+    按批次分目录: 发布时读的是那一批的目录, 落在别处的文件会被漏掉.
     """
-    return os.path.join(root, "release", "%s-%s.md" % (cr["id"], cr["slug"]))
+    return os.path.join(root, "release", batch, "%s-%s.md" % (cr["id"], cr["slug"]))
 
 
-def write_release(root, cr):
+def write_release(root, cr, batch):
     """release: 项目有 PR 模板就整份复制过来 -- 骨架即模板, 实施时只往里填事实.
 
-    不覆盖已有的: 那里面是一路攒下来的事实.
+    不覆盖已有的: 那里面是一路攒下来的事实. 别处 (旧的顶层位置 / 别的批次) 已有同名文件时
+    也不新建, 返回那一份让调用方提示迁移 -- 两份并存必漂移.
     """
     cr_id = cr["id"]
-    path = release_path(root, cr)
-    os.makedirs(os.path.dirname(path), exist_ok=True)
+    path = release_path(root, cr, batch)
     if os.path.exists(path):
         return path, "existing"
+    fn = os.path.basename(path)
+    for b, relp in release_files(root, cr_id):
+        if os.path.basename(relp) == fn:
+            return os.path.join(root, relp), "elsewhere"
+    os.makedirs(os.path.dirname(path), exist_ok=True)
     repo_root = os.path.dirname(os.path.dirname(root))
     tmpl = find_pr_template(repo_root)
     if not tmpl:
@@ -806,6 +882,7 @@ def cmd_new_spec(args):
     cr = find_cr(root, args.cr)
     if not cr:
         die("没有这个 CR: %s" % args.cr)
+    batch = need_batch(root, cr, "建 spec 与上线产物")
     d = cr_dir(root, args.cr)
     if not d:
         d = os.path.join(root, "work", "%s-%s" % (cr["id"], cr["slug"]))
@@ -817,9 +894,12 @@ def cmd_new_spec(args):
                                   "BASE": git_head(os.path.dirname(os.path.dirname(root))),
                                   "TITLE": h1(read(cr["path"])) or cr["slug"]}))
     print("已建 spec:", path)
-    rpath, src = write_release(root, cr)
+    rpath, src = write_release(root, cr, batch)
     if src == "existing":
         print("release 已存在, 未动:", rpath)
+    elif src == "elsewhere":
+        print("release 已在别处, 未新建: %s\n  应在 release/%s/ 下 (CR 的 release 字段), 请挪过去并同步引用"
+              % (os.path.relpath(rpath, root), batch))
     elif src:
         print("已建 release (上线事实): %s  <- 整份复制自 %s" % (rpath, src))
     else:
@@ -835,13 +915,14 @@ def cmd_new_seed(args):
     if args.name and not name:
         die("名字 %r 里没有可用的 ascii 字母或数字, 文件名会退回默认的那一个. "
             "换一个拉丁字母的短名 (backfill, fix-status), 中文写进文件头的说明" % args.name)
-    path = seed_path(root, cr, name)
+    batch = need_batch(root, cr, "建手工 SQL")
+    path = seed_path(root, cr, batch, name)
     os.makedirs(os.path.dirname(path), exist_ok=True)
     if os.path.exists(path):
         die("已存在: %s" % path)
     write(path, fill("seed.sql", {"CR": cr["id"], "NAME": args.name or "回填 / 修复"}))
     print("已建手工 SQL:", path)
-    print("  与上线产物并排放在 release/ 下: 跑它的人和读发布说明的是同一个人, 而 work/ 在")
+    print("  与上线产物并排放在 release/%s/ 下: 跑它的人和读发布说明的是同一个人, 而 work/ 在" % batch)
     print("  提炼之后整个删掉 -- 这段 SQL 要活到它真的在每个环境跑过为止.")
     print("  这里只放跑完即弃的那类. 参考数据进迁移, 环境配置进项目的 seed 脚本 (归宿四类见 conventions).")
 
@@ -864,6 +945,33 @@ def cmd_new_review(args):
     print("已建 review:", path)
 
 
+def cmd_new_runbook(args):
+    root = need_root(args)
+    if not BATCH_RE.match(args.env):
+        die("环境名只能是字母数字与 . _ - (用项目里的名字, 例 ibnk-test, sandbox, prod), 得到 %r" % args.env)
+    why = bad_batch(args.batch)
+    if why:
+        die(why)
+    src = os.path.join(root, "release", args.batch)
+    if not os.path.isdir(src):
+        die("release/%s/ 不存在, 没有可写进手册的上线文件 -- 批次名对吗? 已有批次: %s"
+            % (args.batch, ", ".join(release_batches(root)) or "(无)"))
+    d = os.path.join(root, "release", "runbook", args.env, args.batch)
+    for sub in ("sql", "scripts"):
+        os.makedirs(os.path.join(d, sub), exist_ok=True)
+    for name in ("runbook.md", "log.md"):
+        path = os.path.join(d, name)
+        if os.path.exists(path):
+            print("已存在, 未动:", os.path.relpath(path, root))
+        else:
+            write(path, fill(name, {"ENV": args.env, "BATCH": args.batch, "DATE": today()}))
+            print("已建:", os.path.relpath(path, root))
+    files = sorted(fn for fn in os.listdir(src) if os.path.isfile(os.path.join(src, fn)))
+    print("release/%s/ 下 %d 个上线文件 (手册的来源, 逐份读):" % (args.batch, len(files)))
+    for fn in files:
+        print("  ", fn)
+
+
 # ---------- status ----------
 
 # 手工 SQL: 工作目录下的 *.sql. "跑过了" 认的是文件头 `env=` 后面真写了东西 --
@@ -871,23 +979,20 @@ def cmd_new_review(args):
 SEED_DONE_RE = re.compile(r"env=\S")
 
 
-def seed_path(root, cr, name=""):
-    """手工 SQL 与上线产物并排: release/CR-NNN-<slug>.seed[-<名字>].sql."""
+def seed_path(root, cr, batch, name=""):
+    """手工 SQL 与上线产物并排: release/<批次>/CR-NNN-<slug>.seed[-<名字>].sql."""
     stem = "%s-%s.seed" % (cr["id"], cr["slug"])
-    return os.path.join(root, "release", "%s%s.sql" % (stem, "-" + name if name else ""))
+    return os.path.join(root, "release", batch, "%s%s.sql" % (stem, "-" + name if name else ""))
 
 
 def seed_files(root, cr):
-    """[(相对 sdd 根的路径, 是否已执行)], 按名字排序."""
-    d = os.path.join(root, "release")
-    if not os.path.isdir(d):
-        return []
+    """[(相对 sdd 根的路径, 是否已执行)], 按批次再按名字排序. 旧的顶层位置也读 (只读兼容)."""
     prefix = "%s-%s.seed" % (cr["id"], cr["slug"])
     out = []
-    for fn in sorted(os.listdir(d)):
+    for _, relp in release_files(root, cr["id"]):
+        fn = os.path.basename(relp)
         if fn.startswith(prefix) and fn.endswith(".sql"):
-            full = os.path.join(d, fn)
-            out.append((os.path.join("release", fn), bool(SEED_DONE_RE.search(read(full)))))
+            out.append((relp, bool(SEED_DONE_RE.search(read(os.path.join(root, relp))))))
     return out
 
 
@@ -898,6 +1003,7 @@ def cr_state(root, cr):
     st = {"cr": cr, "status": info["status"], "dir": d, "spec": None, "reviews": {},
           "parallel": None, "reviewers": [], "seeds": []}
     st["seeds"] = seed_files(root, cr)
+    st["release_files"] = release_files(root, cr["id"])
     if d:
         pf = os.path.join(d, ".parallel")
         if os.path.isfile(pf):
@@ -1082,6 +1188,11 @@ def render_cr_status(root, cr, st=None):
         out.append("  review 策略: " + (
             "并行 (按车道派窗口, 阵容: %s)" % (", ".join(st["reviewers"]) or "codex / pi 各用缺省")
             if st["parallel"] else "串行 (自审)"))
+    if info["release"] or st["release_files"]:
+        out.append("  上线批次: " + (info["release"] or "(未定, 先问用户放哪一批, 写进 CR 的 release 字段)"))
+        stray = [p for b, p in st["release_files"] if b != info["release"]]
+        if stray:
+            out.append("    不在 release/%s/ 下 (请迁移): %s" % (info["release"] or "<批次>", ", ".join(stray)))
     if st["seeds"]:
         # 上线要人手跑的那几段 SQL. 没跑完的是欠着的活, 得让翻 PROGRESS.md 的人一眼看见
         out.append("  手工 SQL: " + ", ".join(
@@ -1216,6 +1327,18 @@ def cmd_validate(args):
                     errors.append("%s: 已 fixed 但 %s 变更记录没有指回本 CR 的行" % (rel(d["path"]), rid))
                 if rq["status"] not in ("implemented", "superseded", "retired"):
                     errors.append("%s: 已 fixed 但 %s 状态是 %s" % (rel(d["path"]), rid, rq["status"]))
+        # 上线批次: 文件该在 release/<批次>/ 下, 批次由 frontmatter 的 release 字段定
+        rfiles = release_files(root, cid)
+        if p["release"] and bad_batch(p["release"]):
+            warns.append("%s: frontmatter `release`: %s" % (rel(d["path"]), bad_batch(p["release"])))
+        elif rfiles and not p["release"]:
+            warns.append("%s: 有 release 文件 (%s) 却没有 release 字段 -- 补 `release: <批次>`, 文件挪进 release/<批次>/"
+                         % (rel(d["path"]), ", ".join(f for _, f in rfiles[:3]) + (" 等 %d 个" % len(rfiles) if len(rfiles) > 3 else "")))
+        elif p["release"]:
+            stray = [f for b, f in rfiles if b != p["release"]]
+            if stray:
+                warns.append("%s: release 字段是 %s, 但这些文件不在 release/%s/ 下 (旧的顶层位置或别的批次): %s"
+                             % (rel(d["path"]), p["release"], p["release"], ", ".join(stray)))
         # reviews
         st = cr_state(root, d)
         for stage, r in st["reviews"].items():
@@ -1434,6 +1557,8 @@ def main():
     s = sub.add_parser("new-spec"); s.add_argument("cr"); s.add_argument("--force", action="store_true"); s.set_defaults(fn=cmd_new_spec)
     s = sub.add_parser("new-seed"); s.add_argument("cr"); s.add_argument("name", nargs="?")
     s.set_defaults(fn=cmd_new_seed)
+    s = sub.add_parser("new-runbook"); s.add_argument("env", help="环境名, 例 ibnk-test")
+    s.add_argument("batch", help="上线批次, 例 sprint7"); s.set_defaults(fn=cmd_new_runbook)
     s = sub.add_parser("new-review"); s.add_argument("cr"); s.add_argument("stage", choices=STAGES)
     s.add_argument("--reviewer"); s.add_argument("--force", action="store_true"); s.set_defaults(fn=cmd_new_review)
     sub.add_parser("validate").set_defaults(fn=cmd_validate)
