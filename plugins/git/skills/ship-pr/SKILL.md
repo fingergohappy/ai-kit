@@ -2,7 +2,6 @@
 name: ship-pr
 description: Bring the default branch in, push, open a PR, then optionally watch CI and merge it when green. Detects the repo's own merge/rebase and PR-merge conventions rather than assuming.
 argument-hint: "[--draft] [--no-merge]"
-disable-model-invocation: true
 ---
 
 # ship-pr

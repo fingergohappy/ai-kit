@@ -2,7 +2,6 @@
 name: sync-main
 description: Bring the latest default branch into the current feature branch, merging or rebasing to match the repo's own convention.
 argument-hint: "[--rebase] [--merge]"
-disable-model-invocation: true
 ---
 
 # sync-main
