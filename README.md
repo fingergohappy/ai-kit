@@ -145,6 +145,7 @@ Tmux infrastructure utilities for inter-pane communication and long-running serv
 | `tmux:tmux-dispatch` | Write the task to a channel document and point another pane's agent at it, stamping a reply channel |
 | `tmux:tmux-reply` | Append the report to that same document and knock on the pane that dispatched the task |
 | `tmux:lane-lead` | Be the lead: talk with the user, start Claude Code workers as windows in your own tmux session, dispatch each its brief, relay checked reports |
+| `tmux:ui-test-lead` | Lead manual UI testing by a tester agent in another pane (or another machine over ssh): standing test rules in every brief, a finish point per item, database check of each report, defects put to the user at once |
 | `tmux:agent-tmux` | Start/restart/stop long-running commands in shared tmux session (auto-isolates by project/branch) |
 
 ### git
