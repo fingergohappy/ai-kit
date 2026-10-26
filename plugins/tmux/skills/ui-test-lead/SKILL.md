@@ -57,6 +57,10 @@ The tester starts from nothing and cannot see this conversation. Put this block,
   The pointer says where the document is (`ssh <this-host> cat <path>`) and that the report is appended there over ssh, then announced by running this machine's `tmux-reply` script over ssh: `ssh <this-host> "bash <path>/tmux-reply/scripts/reply.sh <your pane> <doc> 'DONE: …'"`. Give the remote tester a small skill that says exactly this, so it does not have to be repeated in every pointer. Take the pane id from `ssh <host> tmux list-panes -a`, not from memory.
 - Before pasting, `capture-pane` the tester once: if a menu is open ("Enter to select"), your Enter would pick an option.
 
+## 3b. Pages first, back end second
+
+Whatever a customer or operator can see on a page — a status, a message, a notification record, the result of a disposition — is tested by the tester on that page. Use the API and the database for two things only: setting up what no page can produce (flipping a mock, injecting a deposit, forcing a refresh), and checking behaviour no page shows (a refused callback, a runner, an event's payload). A scenario you drove through the API yourself still gets a page pass wherever a page shows its outcome; a database check confirms the page, it never replaces it.
+
 ## 4. When a report arrives
 
 1. Read the report section, not just the status line.
