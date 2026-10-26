@@ -29,18 +29,20 @@ The tester starts from nothing and cannot see this conversation. Put this block,
 ### Rules (apply to every task in this document)
 
 1. **Browser only, never the database.** Act only on the pages of <customer app> and <admin console>. Do not read or change the database; do not call the helper's SQL / mock-switch / data-seeding endpoints; do not call the platform's API with scripts in place of the pages. Only exception: login codes and 2FA codes from <read-only helper endpoints>.
-2. **Reach pages by clicking, not by typing a URL** (the login page excepted). The click path a real customer or operator takes is what is being tested; an entry you cannot find is itself a finding. An ID in the brief is something to look for in a list, not a URL to build.
+2. **Reach pages by clicking, not by typing a URL or following a pasted link** (the login page excepted). The click path a real customer or operator takes is what is being tested; an entry you cannot find is itself a finding. An ID in the brief is something to look for in a list, not a URL to build.
 3. **Stop at the finish point; never wait on your own.** Every item states its finish point. Where it does not say to wait, record what the page shows now and move on — the back-end outcome is checked by the dispatcher. Where it says to wait, keep to the stated interval and limit, and at the limit record what you see.
 4. **Login codes are shared.** <Environment> sends one login code per address every <N> seconds: no repeated resends, no login loops. <Accounts the user also uses> — log in only when needed, once, and not again while the session holds. Login failing or "too many attempts" → `BLOCKED:`.
 5. **Press only authorised buttons.** Anything that moves money or changes configuration (confirm a payment, dispose of a case, archive, toggle, save settings) only when the item explicitly asks, and only that one press. The admin console is look-only unless an item grants a step. "Open the review page and leave" means do not submit.
 6. **On an error, copy it; do not retry.** On a refusal, error or warning, stop at that step, copy the text verbatim (every language shown), screenshot it, report. Do not change the amount, recipient or any input and try again — the dispatcher needs the first outcome. Items that say "expected to be refused, note it and continue" are the exception. If the browser itself crashes, restart it, resume from that step, and say so in the report.
-7. **Report.** For every item: what you saw / the page's text verbatim / screenshot paths (absolute, on your machine, file names carrying the item id) / what differs from the expectation ("none" if nothing). The status line starts with `DONE:`, `BLOCKED:` or `QUESTION:`. Never write passwords, login codes or 2FA codes into the report.
+7. **Use only what the page tells you.** Every value you type (a reference, an evidence id, an order number, an account) must be something the customer or operator could know from the screens, an email they received, or a document they hold. If a step needs a value that is only in the database, or that only the brief gave you, stop and report it as a finding ("the form wants X, nothing on screen shows X") instead of typing it.
+8. **Report.** For every item: what you saw / the page's text verbatim / screenshot paths (absolute, on your machine, file names carrying the item id) / what differs from the expectation ("none" if nothing). The status line starts with `DONE:`, `BLOCKED:` or `QUESTION:`. Never write passwords, login codes or 2FA codes into the report.
 ```
 
 ## 2. How to write each item
 
 - An id (`N1`, `T3`, `M1`, …) and the ticket it checks.
 - The account to use and where to start (which menu).
+- Every value the tester has to type comes from the screens, an email the user or operator receives, or a document they hold — never from the database. If the flow needs a value only the database has (an internal reference, an evidence id), that is itself a finding: write the item so the tester has to look for it on the page, and record the gap if it is not there.
 - Steps as a **click path**, never a URL; find records by a short id prefix plus what they look like (amount, currency, counterparty).
 - The expectation, taken from the code and the ticket — the tester does not read code. State exact texts, filter labels, which list a record should appear in.
 - **A finish point**: "done when you see X"; for back-end progress "refresh every N minutes, at most M minutes". An item without a finish point does not go out.
