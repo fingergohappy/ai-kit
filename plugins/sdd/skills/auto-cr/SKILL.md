@@ -1,7 +1,7 @@
 ---
 name: auto-cr
 description: |
-  把一个已存在的 CR-NNN 从当前状态一路推到落实前, 中途不问用户: 每一步照 sdd.py status 的下一步做, 三次 review 派给 tmux 里的 codex / pi 并行审 (一个车道一个窗口), 结果合并回 reviews/0N-<stage>.md. 业务上拿不准的先按自己推荐的做法执行, 把问题记成 REQ 第 10 节的 OQ 条目, 攒到最后一起给用户确认. 当用户说 "自动推进 CR-005", "让它自己跑完", "不用问我, 一路做下去", "让 codex 和 pi 并行审这个 CR", "全自动走 sdd 流程", "auto-cr" 时使用. 前提是 CR 已经立好 (/create-cr 之后); 会改项目代码.
+  把一个已存在的 CR-NNN 从当前状态一路推到落实前, 中途不问用户: 每一步照 sdd.py status 的下一步做, 三次 review 派给 tmux 里的 crew 工具 (codex / pi / zcode 等) 并行审 (一个车道一个窗口), 结果合并回 reviews/0N-<stage>.md. 业务上拿不准的先按自己推荐的做法执行, 把问题记成 REQ 第 10 节的 OQ 条目, 攒到最后一起给用户确认. 当用户说 "自动推进 CR-005", "让它自己跑完", "不用问我, 一路做下去", "让 codex 和 pi 并行审这个 CR", "全自动走 sdd 流程", "auto-cr" 时使用. 前提是 CR 已经立好 (/create-cr 之后); 会改项目代码.
 argument-hint: "<CR-NNN> [--serial]"
 ---
 
@@ -21,7 +21,8 @@ REQ 第 10 节的开放问题必须在 implemented 前清空, 而自动推进期
 
 1. `sdd.py status CR-NNN` 能查到这个 CR, 且状态不是 `fixed` / `rejected`.
 2. 工作树干净 (`git status --porcelain` 为空) -- 自动推进会连续提交, 混着别人的改动没法回退.
-3. 并行 review 要在 tmux 里跑 (`$TMUX` 非空) 且 `codex` / `pi` 至少有一个在 PATH 上.
+3. 并行 review 要在 tmux 里跑 (`$TMUX` 非空) 且 agent-crew 的 `crew-models.py tools --default` 至少列出一个工具
+   (默认工具里在 PATH 上的).
    不满足就降级成串行自审, 在开场白里说明, **不要**因此中止.
    用户给了 `--serial` 也走串行.
 
@@ -58,7 +59,7 @@ REQ 第 10 节的开放问题必须在 implemented 前清空, 而自动推进期
 
 自动模式只差一条: **不问用户要不要并行**. 前提第 3 条满足就直接并行, 不满足降级串行自审并在
 开场白说明, `--serial` 同样走串行. 那节里 "问一次就够" 的那段对无人值守不适用 -- 没人可问.
-阵容照读工作目录的 `.reviewers` (立 CR 时问过的); 没有这个文件就按 `codex` / `pi` 两个工具缺省,
+阵容照读工作目录的 `.reviewers` (立 CR 时问过的); 没有这个文件就按 `crew-models.py tools --default` 列出的工具各用缺省,
 开场白里说明. 阵容里有失效的照 `agent-crew` 自动替补, 替补写进 review 的车道结论, 不停下来问.
 
 ## 轮次上限

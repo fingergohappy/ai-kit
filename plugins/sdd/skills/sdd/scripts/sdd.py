@@ -1186,7 +1186,7 @@ def render_cr_status(root, cr, st=None):
            "  工作目录: " + (st["dir"] or "(无)")]
     if st["parallel"] is not None:
         out.append("  review 策略: " + (
-            "并行 (按车道派窗口, 阵容: %s)" % (", ".join(st["reviewers"]) or "codex / pi 各用缺省")
+            "并行 (按车道派窗口, 阵容: %s)" % (", ".join(st["reviewers"]) or "crew 默认工具各用缺省")
             if st["parallel"] else "串行 (自审)"))
     if info["release"] or st["release_files"]:
         out.append("  上线批次: " + (info["release"] or "(未定, 先问用户放哪一批, 写进 CR 的 release 字段)"))

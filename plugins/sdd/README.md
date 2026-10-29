@@ -12,7 +12,7 @@ Python 3 标准库, Claude Code / Codex / pi 都能用.
 | `spec` | 写实施 spec: 侦察 (file:line) -> 改动总览 / 分步 / 测试 / 上线 | `work/CR-NNN-*/spec.md` | 否 |
 | `implement-cr` | 做下一件事: 处理发现 / TDD 分步实施 / 落实 REQ | 提交, REQ 更新 | **是** |
 | `review-cr` | 三次 review: docs / spec / impl, 及复核; `distill` 模式把教训提炼进错题本并清理工作目录 | `reviews/0N-<stage>.md`, `lessons.md` | 否 |
-| `auto-cr` | 无人值守推进一个已立的 CR 到落实前: review 派给 tmux 里的 codex / pi 并行审, 业务歧义记成 OQ 往下走 | 提交, reviews, REQ 第 10 节的 OQ | **是** |
+| `auto-cr` | 无人值守推进一个已立的 CR 到落实前: review 派给 tmux 里的 crew 工具 (codex / pi / zcode 等) 并行审, 业务歧义记成 OQ 往下走 | 提交, reviews, REQ 第 10 节的 OQ | **是** |
 | `runbook` | 按环境、按批次写上线手册并执行: `pre` 收集上线文件写手册, `run` 逐步执行并记录, `auto` 先 pre 再 run | `release/runbook/<环境>/<批次>/{runbook.md, log.md, sql/, scripts/}` | 否 (会动环境, 写操作先问) |
 
 ## 安装
@@ -113,6 +113,6 @@ plugins/sdd/
 ```
 
 `auto-cr` 的并行 review 依赖 ai-kit 的 `tmux` 插件 (`tmux-dispatch` 送 brief, `agent-crew` 起窗口)
-与 PATH 上的 `codex` / `pi`. 缺任何一样它降级成串行自审, 流程照走, 不会中止.
+与 agent-crew 的默认工具 (`crew-models.py tools --default`) 至少一个在 PATH 上. 缺任何一样它降级成串行自审, 流程照走, 不会中止.
 
 从 OpenSpec 借了什么、没借什么: `sdd/references/openspec-borrowings.md`.

@@ -88,7 +88,7 @@ review: to fix -> fixing -> fixed
 ```
 
 `/auto-cr CR-NNN` 是这条链从 `/create-cr` 之后到落实之前的无人值守版: 照同样的步骤走, 不逐步问用户,
-三次 review 派给 tmux 里的 codex / pi 并行审, 业务歧义先按推荐做法执行并记成 REQ 第 10 节的 OQ,
+三次 review 派给 tmux 里的 crew 工具 (codex / pi / zcode 等, 以 agent-crew 注册的为准) 并行审, 业务歧义先按推荐做法执行并记成 REQ 第 10 节的 OQ,
 到落实那步停下等用户确认 OQ.
 
 上线时按环境走 `/runbook`: `pre <环境> <批次>` 读 `release/<批次>/` 全部上线文件写手册, 给用户过目;

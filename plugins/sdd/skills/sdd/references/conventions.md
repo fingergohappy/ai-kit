@@ -158,7 +158,9 @@ review 是软闸门: 跳过某次 review 直接往下走需要人明确说 "跳�
 立 CR 时问用户一次**, 答案写进工作目录的 `.parallel` (`yes` / `no`) 与 `.reviewers` (阵容, 一行一个
 `<工具>:<模型>:<思考等级>`), `sdd.py status` 会显示; 三次 review 都读它们, 不重问 -- 三次 review
 横跨好几天好几个会话, 每次问就是每次打断. 阵容里的模型每次起窗口前现查, 失效的自动替补并记进 review.
-环境不支持 (没 tmux, 或 codex / pi 都不在 PATH) 就不问也不写, 读不到即串行.
+环境不支持 (没 tmux, 或 agent-crew 的 `crew-models.py tools --default` 一个工具都列不出) 就不问也不写,
+读不到即串行. 有哪些工具、默认用哪几个由 agent-crew 决定 (`scripts/tools/` 下一个工具一个适配文件,
+默认工具在 `~/.config/agent-crew/config.json`), 这里不写死.
 `/draft` `/req` `/create-cr` `/spec` `/implement-cr` 都是串行的活: spec 是一份连贯文档, 拆开写
 会互相矛盾; 分步实施前后依赖, 并行只会制造冲突, 真要并行写还得先做 worktree 隔离.
 

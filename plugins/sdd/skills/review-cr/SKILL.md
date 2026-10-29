@@ -81,7 +81,7 @@ review 是这套流程里真正拦住问题的环节: 文档错了在 docs 阶�
 `.parallel` (`yes` / `no`) 与 `.reviewers` (阵容, 一行一个 `<工具>:<模型>:<思考等级>`) 里,
 `sdd.py status CR-NNN` 也会显示. 第 2 步读它们 -- `yes` 就照下面五步做, `no` 或读不到就回
 `## 步骤` 第 4 步自己逐车道审. 两条路的产出文件与格式完全一样. `.parallel` 是 `yes` 而没有
-`.reviewers` (老 CR) 时, 阵容按 `codex` / `pi` 两个工具缺省算, 不补问.
+`.reviewers` (老 CR) 时, 阵容按 `crew-models.py tools --default` 列出的工具各用缺省算, 不补问.
 
 **不要在这里重问用户**. 三次 review 横跨好几天好几个会话, 每次问一遍就是每次打断; 一个 CR 只在
 立项时定一次策略. 用户中途想改主意, 改那个文件即可. `/auto-cr` 连文件都不读 -- 无人值守没人可问,
@@ -108,8 +108,8 @@ S=<agent-crew skill 的绝对路径>/scripts/crew-models.py
 $S assign <窗口数> - < <工作目录>/.reviewers
 tmux has-session -t agents 2>/dev/null || tmux new-session -d -s agents
 # 一个车道一个窗口, 窗口名带工具与车道号, 便于 tmux list-windows 一眼看出谁在审什么
-tmux new-window -d -t agents -n codex-CR-NNN-<stage>-A "cd <repo 绝对路径> && exec $($S launch <pick>)"
-tmux list-panes -t agents:codex-CR-NNN-<stage>-A -F '#{pane_id}'
+tmux new-window -d -t agents -n <工具>-CR-NNN-<stage>-A "cd <repo 绝对路径> && exec $($S launch <pick>)"
+tmux list-panes -t agents:<工具>-CR-NNN-<stage>-A -F '#{pane_id}'
 ```
 
 模型由 `.reviewers` 决定, 启动、核对底栏、自动替补都照 `agent-crew` 的 "Models" 一节, 不手拼参数.
