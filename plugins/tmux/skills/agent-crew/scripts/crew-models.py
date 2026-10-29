@@ -1,30 +1,47 @@
 #!/usr/bin/env python3
-"""crew-models.py - what each crew tool can run right now, and how to launch it.
+"""crew-models.py - which crew tools exist, what each can run right now, and how to launch it.
 
 A crew window is chosen as one "pick": <tool>[:<model>[:<effort>]]
     codex:gpt-6-astra:high      pi:xai/grok-4.6:xhigh      codex      (= tool's own default)
 
 Usage:
-    crew-models.py catalog [codex|pi]       menu: each tool's default and every model with its efforts
+    crew-models.py tools [--default]        registered tools: on PATH?, in the default lineup?, footer
+                                            to check after launch; --default prints just the names of
+                                            the default tools that are on PATH, one per line
+    crew-models.py catalog [<tool>...]      menu: each tool's default and every model with its efforts
     crew-models.py check <pick>...          validate picks; exit 1 if any is unusable
     crew-models.py launch <pick>            print the command to exec in the tmux window
     crew-models.py assign <n> <pick>...     give n windows a pick each: drop unusable picks, rotate
-                                            the rest; if none is usable fall back to tool defaults
+                                            the rest; if none is usable fall back to the default tools
     (`-` in place of the picks reads them from stdin, one per line, `#` comments allowed.)
 
-Models change often, so nothing here is hard-coded: codex is read from ~/.codex/models_cache.json
-and ~/.codex/config.toml, pi from `pi --list-models`, `pi --help` and ~/.pi/agent/settings.json.
+Tools are not listed here. Each is one adapter file, tools/<name>.py next to this script, or
+~/.config/agent-crew/tools/<name>.py (same name overrides the built-in one). An adapter defines
+    catalog() -> ({model: {"efforts": [...], "default_effort"?: str, "listed"?: bool}},
+                  (default_model, default_effort), note)
+    launch(model, effort) -> argv list          (model / effort may be "" = the tool's default)
+    FOOTER, CONFIG                              strings shown by `tools`
+    BIN                                         optional, the executable when it isn't <name>
+An empty efforts list means the tool can't tell, and the effort is not validated.
+
+Default tools (the lineup when nothing more specific is given) come from
+~/.config/agent-crew/config.json: {"default_tools": ["codex", "pi", ...]}; without it, every tool.
+
+Models change often, so no model is hard-coded anywhere: each adapter reads its tool's own files.
 """
 
+import glob
+import importlib.util
 import json
 import os
-import re
+import shlex
 import shutil
-import subprocess
 import sys
 
-HOME = os.path.expanduser("~")
-TOOLS = ("codex", "pi")
+sys.dont_write_bytecode = True  # adapters are loaded from the skill directory; keep it clean
+
+HERE = os.path.dirname(os.path.abspath(__file__))
+USER_DIR = os.path.expanduser("~/.config/agent-crew")
 
 
 def die(msg):
@@ -32,66 +49,43 @@ def die(msg):
     sys.exit(2)
 
 
-def run(cmd):
+# ---------- registry ----------
+
+def load_tools():
+    files = {}
+    for d in (os.path.join(HERE, "tools"), os.path.join(USER_DIR, "tools")):
+        for path in sorted(glob.glob(os.path.join(d, "*.py"))):
+            name = os.path.basename(path)[:-3]
+            if not name.startswith("_"):
+                files[name] = path
+    tools = {}
+    for name, path in sorted(files.items()):
+        spec = importlib.util.spec_from_file_location("crew_tool_" + name, path)
+        mod = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(mod)
+        tools[name] = mod
+    return tools
+
+
+TOOLS = load_tools()
+
+
+def default_tools():
     try:
-        out = subprocess.run(cmd, capture_output=True, text=True, timeout=60)
-    except (OSError, subprocess.TimeoutExpired) as e:
-        return "", str(e)
-    return out.stdout, out.stderr
-
-
-# ---------- catalogs ----------
-
-def codex_catalog():
-    """{model: {"efforts": [...], "default_effort": str, "listed": bool}}, default (model, effort)."""
-    models = {}
-    path = os.path.join(HOME, ".codex", "models_cache.json")
-    try:
-        with open(path) as f:
-            data = json.load(f)
+        with open(os.path.join(USER_DIR, "config.json")) as f:
+            names = json.load(f).get("default_tools") or []
     except (OSError, ValueError):
-        data = {}
-    for m in data.get("models", []):
-        models[m["slug"]] = {
-            "efforts": [lv["effort"] for lv in m.get("supported_reasoning_levels", [])],
-            "default_effort": m.get("default_reasoning_level", ""),
-            "listed": m.get("visibility") != "hide",
-        }
-    cfg = {}
-    try:
-        with open(os.path.join(HOME, ".codex", "config.toml")) as f:
-            for line in f:
-                if line.startswith("["):
-                    break  # only top-level keys
-                mt = re.match(r'\s*(model|model_reasoning_effort)\s*=\s*"([^"]*)"', line)
-                if mt:
-                    cfg[mt.group(1)] = mt.group(2)
-    except OSError:
-        pass
-    return models, (cfg.get("model", ""), cfg.get("model_reasoning_effort", "")), data.get("fetched_at", "")
+        names = []
+    names = [n for n in names if n in TOOLS]
+    return names or list(TOOLS)
 
 
-def pi_catalog():
-    """{provider/model: {"efforts": [...]}}, default (model, effort)."""
-    help_out, _ = run(["pi", "--help"])
-    mt = re.search(r"--thinking <level>.*?:\s*([a-z, ]+)", help_out)
-    levels = [s.strip() for s in mt.group(1).split(",")] if mt else []
-    out, _ = run(["pi", "--list-models"])
-    models = {}
-    for line in out.splitlines():
-        cols = line.split()
-        if len(cols) < 6 or cols[0] == "provider" or line.startswith("["):
-            continue
-        thinking = cols[4] == "yes"
-        models[cols[0] + "/" + cols[1]] = {"efforts": levels if thinking else ["off"]}
-    st = {}
-    try:
-        with open(os.path.join(HOME, ".pi", "agent", "settings.json")) as f:
-            st = json.load(f)
-    except (OSError, ValueError):
-        pass
-    dm = "%s/%s" % (st.get("defaultProvider", ""), st.get("defaultModel", "")) if st.get("defaultModel") else ""
-    return models, (dm, st.get("defaultThinkingLevel", ""))
+def binary(tool):
+    return getattr(TOOLS[tool], "BIN", tool)
+
+
+def on_path(tool):
+    return shutil.which(binary(tool)) is not None
 
 
 _cache = {}
@@ -99,11 +93,7 @@ _cache = {}
 
 def catalog(tool):
     if tool not in _cache:
-        if tool == "codex":
-            m, d, _ = codex_catalog()
-        else:
-            m, d = pi_catalog()
-        _cache[tool] = (m, d)
+        _cache[tool] = TOOLS[tool].catalog()
     return _cache[tool]
 
 
@@ -126,34 +116,24 @@ def problem(pick):
     """None if usable, else why not."""
     p = parse(pick)
     if p is None:
-        return "unknown tool (expected %s)" % " / ".join(TOOLS)
+        return "unknown tool (registered: %s)" % " / ".join(TOOLS)
     tool, model, effort = p
-    if not shutil.which(tool):
-        return "%s is not on PATH" % tool
+    if not on_path(tool):
+        return "%s is not on PATH" % binary(tool)
     if not model:
         return None
-    models, _ = catalog(tool)
+    models = catalog(tool)[0]
     if model not in models:
         return "%s has no model %s right now" % (tool, model)
-    if effort and effort not in models[model]["efforts"]:
-        return "%s supports efforts %s, not %s" % (model, ",".join(models[model]["efforts"]), effort)
+    efforts = models[model]["efforts"]
+    if effort and efforts and effort not in efforts:
+        return "%s supports efforts %s, not %s" % (model, ",".join(efforts), effort)
     return None
 
 
 def launch(pick):
     tool, model, effort = parse(pick)
-    cmd = [tool]
-    if tool == "codex":
-        if model:
-            cmd += ["-m", model]
-        if effort:
-            cmd += ["-c", "model_reasoning_effort=" + effort]
-    else:
-        if model:
-            cmd += ["--model", model]
-        if effort:
-            cmd += ["--thinking", effort]
-    return " ".join(cmd)
+    return " ".join(shlex.quote(a) for a in TOOLS[tool].launch(model, effort))
 
 
 def read_picks(args):
@@ -169,22 +149,37 @@ def read_picks(args):
 
 # ---------- commands ----------
 
+def cmd_tools(args):
+    defaults = default_tools()
+    if args == ["--default"]:
+        for tool in defaults:
+            if on_path(tool):
+                print(tool)
+        return
+    if args:
+        die("tools: only --default is accepted")
+    for tool, mod in TOOLS.items():
+        flags = ["on PATH" if on_path(tool) else "NOT on PATH"]
+        if tool in defaults:
+            flags.append("default")
+        print("## %s (%s)" % (tool, ", ".join(flags)))
+        print("config: %s" % getattr(mod, "CONFIG", "?"))
+        print("footer: %s" % getattr(mod, "FOOTER", "?"))
+        print()
+
+
 def cmd_catalog(args):
-    tools = args or list(TOOLS)
-    for tool in tools:
+    for tool in args or list(TOOLS):
         if tool not in TOOLS:
-            die("unknown tool " + tool)
-        if not shutil.which(tool):
+            die("unknown tool %s (registered: %s)" % (tool, " / ".join(TOOLS)))
+        if not on_path(tool):
             print("## %s: not on PATH\n" % tool)
             continue
-        models, (dm, de) = catalog(tool)
-        note = ""
-        if tool == "codex":
-            note = " (cache fetched %s)" % codex_catalog()[2]
-        print("## %s%s" % (tool, note))
+        models, (dm, de), note = catalog(tool)
+        print("## %s%s" % (tool, " (%s)" % note if note else ""))
         if not dm:
-            # The tool's built-in default can't be read from disk (codex's isn't its top-priority
-            # model), so don't guess: a bare launch shows it in the window footer.
+            # The tool's built-in default can't always be read from disk (codex's isn't its
+            # top-priority model), so don't guess: a bare launch shows it in the window footer.
             print("default: %s  (none configured: the tool's built-in default, shown in the window footer)" % tool)
         elif not de:
             de = models.get(dm, {}).get("default_effort", "")
@@ -193,10 +188,10 @@ def cmd_catalog(args):
             print("default: %s:%s:%s" % (tool, dm, de))
         for name in sorted(models):
             info = models[name]
-            if tool == "codex" and not info["listed"]:
+            if not info.get("listed", True):
                 continue
             mark = " (default)" if name == dm else ""
-            print("  %-34s %s%s" % (name, ",".join(info["efforts"]), mark))
+            print("  %-34s %s%s" % (name, ",".join(info["efforts"]) or "?", mark))
         print()
 
 
@@ -239,9 +234,9 @@ def cmd_assign(args):
         else:
             picks.append(pick)
     if not picks:
-        picks = [t for t in TOOLS if shutil.which(t)]
+        picks = [t for t in default_tools() if on_path(t)]
         if not picks:
-            die("assign: no usable pick and neither codex nor pi is on PATH")
+            die("assign: no usable pick and none of the default tools (%s) is on PATH" % ", ".join(default_tools()))
         print("# no usable pick in the lineup; falling back to tool defaults: %s" % ", ".join(picks))
     for i in range(n):
         print("%d %s" % (i + 1, picks[i % len(picks)]))
@@ -252,7 +247,8 @@ def main():
         print(__doc__.strip())
         return
     cmd, args = sys.argv[1], sys.argv[2:]
-    fn = {"catalog": cmd_catalog, "check": cmd_check, "launch": cmd_launch, "assign": cmd_assign}.get(cmd)
+    fn = {"tools": cmd_tools, "catalog": cmd_catalog, "check": cmd_check, "launch": cmd_launch,
+          "assign": cmd_assign}.get(cmd)
     if not fn:
         die("unknown command " + cmd)
     fn(args)

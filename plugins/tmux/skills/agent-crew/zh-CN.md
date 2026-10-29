@@ -1,8 +1,8 @@
 ---
 name: agent-crew
 description: |
-  在专用的 `agents` tmux session 里让外部 CLI agent（codex、pi……）干活，一个 window 一个——不管是把一件事交给其中一个、把一件事拆给几个、让两个各做一遍同一道题作对照，还是让几个从不同角度审同一份东西。当用户说「让 codex 去做这个」「让 codex 和 pi 一起做」「起个 agent 跑一下」「让 pi 也做一遍看看」「起几个 agent 分头审」「多角度并行 review」「一个车道一个模型」「开几个窗口跑」时触发。本 skill 管的是：怎么把 window 起得能看见对方在想什么、每个 window 的工具、模型和思考等级 (开头问一次)、活怎么拆才不打架、写代码的 agent 怎么隔离才不互相毁、结果怎么收怎么验、跑完怎么收摊（问一句再关，别让 window 越堆越多）。每个 window 的任务书怎么写、怎么送，是 `tmux-dispatch` 的事。
-argument-hint: "[<要干的活>] [<交给谁: codex|pi|<工具>:<模型>:<思考等级>>]"
+  在专用的 `agents` tmux session 里让外部 CLI agent（codex、pi、zcode……）干活，一个 window 一个——不管是把一件事交给其中一个、把一件事拆给几个、让两个各做一遍同一道题作对照，还是让几个从不同角度审同一份东西。当用户说「让 codex 去做这个」「让 codex 和 pi 一起做」「起个 agent 跑一下」「让 pi 也做一遍看看」「起几个 agent 分头审」「多角度并行 review」「一个车道一个模型」「开几个窗口跑」时触发。本 skill 管的是：怎么把 window 起得能看见对方在想什么、每个 window 的工具、模型和思考等级 (开头问一次)、活怎么拆才不打架、写代码的 agent 怎么隔离才不互相毁、结果怎么收怎么验、跑完怎么收摊（问一句再关，别让 window 越堆越多）。每个 window 的任务书怎么写、怎么送，是 `tmux-dispatch` 的事。
+argument-hint: "[<要干的活>] [<交给谁: <工具>|<工具>:<模型>:<思考等级>>]"
 disable-model-invocation: false
 ---
 
@@ -47,11 +47,17 @@ pi -p "$(cat brief.md)" 2>&1 | tee out.log
 ## 模型: 每个 window 一个选择, 开头问一次
 
 每个 window 跑一个**选择** (pick): `<工具>:<模型>:<思考等级>`, 例如 `codex:gpt-6-astra:high`、
-`pi:xai/grok-4.6:xhigh`。只写 `<工具>` 表示用那个工具自己配置的缺省 (`~/.codex/config.toml`、pi 的设置)。
+`pi:xai/grok-4.6:xhigh`。只写 `<工具>` 表示用那个工具自己配置的缺省 (配置在哪个文件见 `$S tools`)。
 模型经常变, 所以本 skill 不写任何模型名: 同目录的 `scripts/crew-models.py` 现查每个工具此刻能跑什么。
+
+工具也不写死在这里。每个工具是一个适配文件: `scripts/tools/<名字>.py`, 或用户自己的
+`~/.config/agent-crew/tools/<名字>.py` (同名覆盖内置的); 加一个工具就是加一个文件, 格式见脚本的 `--help`。
+默认阵容用哪几个工具由 `~/.config/agent-crew/config.json` 决定 (`{"default_tools": [...]}`; 没有就全部)。
 
 ```sh
 S=<本 skill 的绝对路径>/scripts/crew-models.py
+$S tools                     # 注册了哪些工具: 在不在 PATH、是不是默认、配置文件、底栏长什么样
+$S tools --default           # 只列默认工具里在 PATH 上的, 一行一个
 $S catalog                   # 菜单: 各工具的缺省, 每个模型及它接受的思考等级
 $S check <pick>...           # 这些选择现在能不能用? 有不能用的退出码 1
 $S assign <n> <pick>...      # n 个 window 各分一个: 不能用的剔掉, 其余轮流
@@ -73,8 +79,9 @@ $S assign 3 codex:gpt-6-astra:high pi:xai/grok-4.6:xhigh     # 输出 "1 <pick>"
 tmux new-window -d -t agents -n <name> "cd <绝对路径> && exec $($S launch <pick>)"
 ```
 
-启动后 `capture-pane` 看一次底栏: pi 显示 `(<provider>) <model> • <effort>`, codex 显示
-`<Model> <effort> · ... weekly N% left`。和选择对不上就关掉替补。汇报时写明每个 window 的选择, 让人
+启动后 `capture-pane` 看一次底栏, 每个工具底栏长什么样见 `$S tools` 的 `footer:` 行。和选择对不上就
+关掉替补。有的工具不是靠启动参数选模型 (zcode 是用环境变量给它一份按选择改好的 provider 配置副本, 因为
+在窗口里切模型会改写它的全局默认) -- 这是适配文件的事, 也是只能通过 `launch` 启动的又一个理由。汇报时写明每个 window 的选择, 让人
 知道到底是谁审的、谁写的。
 
 **自动替补, 不问。** `assign` 剔掉的选择 (模型没了、不支持这个思考等级、工具不在), 或启动后因额度
@@ -83,7 +90,7 @@ tmux new-window -d -t agents -n <name> "cd <绝对路径> && exec $($S launch <p
 额度恢复了就自动用回来。
 
 对照和审查形态里, 相邻 window 要用不同的模型: 同一个盲点问两遍, 不比问一遍多得到什么。按模型算,
-不按工具算: 两个 pi window 分别跑 grok 和 glm 是两个模型; 两个 window 同一个选择就是同一个模型两遍。
+不按工具算: 两个 pi window 分别跑 grok 和 kimi 是两个模型; 两个 window 同一个选择就是同一个模型两遍。
 拆分形态无所谓。
 
 ## 给每个 window 发任务书
